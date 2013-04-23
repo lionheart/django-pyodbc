@@ -1,11 +1,25 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+import os
+from django_pyodbc import metadata
 
-setup(name='sql_server.pyodbc',
-      version='1.0',
-      description='Django MS SQL Server backends using pyodbc',
-      author='django-pyodbc team',
-      url='http://code.google.com/p/django-pyodbc',
-      packages=['sql_server', 'sql_server.pyodbc', 'sql_server.extra'],
-     )
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+
+setup(
+    name='django-pyodbc',
+    version=metadata.__version__,
+    license=metadata.__license__,
+    description="Django 1.5 SQL Server backend using pyodbc.",
+    url='https://github.com/aurorasoftware/django-pyodbc',
+    packages=[
+        'django_pyodbc',
+        'django_pyodbc.management',
+        'django_pyodbc.management.commands'
+    ],
+    install_requires=[
+        'pyodbc',
+    ]
+)
