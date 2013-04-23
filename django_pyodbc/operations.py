@@ -7,7 +7,7 @@ import decimal
 class DatabaseOperations(BaseDatabaseOperations):
     compiler_module = "django_pyodbc.compiler"
     def __init__(self, connection):
-        super(DatabaseOperations, self).__init__()
+        super(DatabaseOperations, self).__init__(connection)
         self.connection = connection
         self._ss_ver = None
 

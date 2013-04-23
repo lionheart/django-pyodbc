@@ -21,7 +21,7 @@ from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDa
 from django.db.backends.signals import connection_created
 from django.conf import settings
 from django import VERSION as DjangoVersion
-if DjangoVersion[:2] == (1,2) :
+if DjangoVersion[:2] == (1,2):
     from django import get_version
     version_str = get_version()
     if 'SVN' in version_str and int(version_str.split('SVN-')[-1]) < 11952: # django trunk revision 11952 Added multiple database support.
@@ -46,15 +46,17 @@ import warnings
 
 warnings.filterwarnings('error', 'The DATABASE_ODBC.+ is deprecated', DeprecationWarning, __name__, 0)
 
-collation = 'Latin1_General_CI_AS'
-if hasattr(settings, 'DATABASE_COLLATION'):
-    warnings.warn(
-        "The DATABASE_COLLATION setting is going to be deprecated, use DATABASE_OPTIONS['collation'] instead.",
-        DeprecationWarning
-    )
-    collation = settings.DATABASE_COLLATION
-elif 'collation' in settings.DATABASE_OPTIONS:
-    collation = settings.DATABASE_OPTIONS['collation']
+try:
+    if hasattr(settings, 'DATABASE_COLLATION'):
+        warnings.warn(
+            "The DATABASE_COLLATION setting is going to be deprecated, use DATABASE_OPTIONS['collation'] instead.",
+            DeprecationWarning
+        )
+        collation = settings.DATABASE_COLLATION
+    elif 'collation' in settings.DATABASE_OPTIONS:
+        collation = settings.DATABASE_OPTIONS['collation']
+except AttributeError:
+    collation = 'Latin1_General_CI_AS'
 
 deprecated = (
     ('DATABASE_ODBC_DRIVER', 'driver'),

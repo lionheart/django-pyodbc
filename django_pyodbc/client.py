@@ -3,20 +3,20 @@ import os
 import sys
 
 class DatabaseClient(BaseDatabaseClient):
-    if os.name=='nt':
+    if os.name == 'nt':
         executable_name = 'osql'
     else:
         executable_name = 'isql'
 
     def runshell(self):
         settings_dict = self.connection.settings_dict
-        user = settings_dict['DATABASE_OPTIONS'].get('user', settings_dict['DATABASE_USER'])
-        password = settings_dict['DATABASE_OPTIONS'].get('passwd', settings_dict['DATABASE_PASSWORD'])
-        if os.name=='nt':
-            db = settings_dict['DATABASE_OPTIONS'].get('db', settings_dict['DATABASE_NAME'])
-            server = settings_dict['DATABASE_OPTIONS'].get('host', settings_dict['DATABASE_HOST'])
-            port = settings_dict['DATABASE_OPTIONS'].get('port', settings_dict['DATABASE_PORT'])
-            defaults_file = settings_dict['DATABASE_OPTIONS'].get('read_default_file')
+        user = settings_dict['OPTIONS'].get('user', settings_dict['USER'])
+        password = settings_dict['OPTIONS'].get('passwd', settings_dict['PASSWORD'])
+        if os.name == 'nt':
+            db = settings_dict['OPTIONS'].get('db', settings_dict['NAME'])
+            server = settings_dict['OPTIONS'].get('host', settings_dict['HOST'])
+            port = settings_dict['OPTIONS'].get('port', settings_dict['PORT'])
+            defaults_file = settings_dict['OPTIONS'].get('read_default_file')
 
             args = [self.executable_name]
             if server:
@@ -32,7 +32,7 @@ class DatabaseClient(BaseDatabaseClient):
             if defaults_file:
                 args += ["-i", defaults_file]
         else:
-            dsn = settings_dict['DATABASE_OPTIONS'].get('dsn', settings_dict['DATABASE_ODBC_DSN'])
+            dsn = settings_dict['OPTIONS'].get('dsn', settings_dict['ODBC_DSN'])
             args = ['%s -v %s %s %s' % (self.executable_name, dsn, user, password)]
 
         # XXX: This works only with Python >= 2.4 because subprocess was added
