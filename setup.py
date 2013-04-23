@@ -12,6 +12,8 @@ setup(
     name='django-pyodbc',
     version=metadata.__version__,
     license=metadata.__license__,
+    maintainer=metadata.__maintainer__,
+    maintainer_email=metadata.__maintainer_email__,
     description="Django 1.5 SQL Server backend using pyodbc.",
     url='https://github.com/aurorasoftware/django-pyodbc',
     packages=[
