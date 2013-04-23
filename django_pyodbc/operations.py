@@ -1,11 +1,11 @@
 from django.db.backends import BaseDatabaseOperations
-from django_pyodbc.pyodbc import query
+from django_pyodbc import query
 import datetime
 import time
 import decimal
 
 class DatabaseOperations(BaseDatabaseOperations):
-    compiler_module = "django_pyodbc.pyodbc.compiler"
+    compiler_module = "django_pyodbc.compiler"
     def __init__(self, connection):
         super(DatabaseOperations, self).__init__()
         self.connection = connection

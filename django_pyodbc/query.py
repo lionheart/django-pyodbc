@@ -53,7 +53,7 @@ def query_class(QueryClass):
         pass
 
     class PyOdbcSSQuery(QueryClass):
-        from django_pyodbc.pyodbc import aggregates
+        from django_pyodbc import aggregates
         aggregates_module = aggregates
 
         def __init__(self, *args, **kwargs):

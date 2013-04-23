@@ -37,10 +37,10 @@ elif DjangoVersion[0] == 1:
 else:
     _DJANGO_VERSION = 9
 
-from django_pyodbc.pyodbc.operations import DatabaseOperations
-from django_pyodbc.pyodbc.client import DatabaseClient
-from django_pyodbc.pyodbc.creation import DatabaseCreation
-from django_pyodbc.pyodbc.introspection import DatabaseIntrospection
+from django_pyodbc.operations import DatabaseOperations
+from django_pyodbc.client import DatabaseClient
+from django_pyodbc.creation import DatabaseCreation
+from django_pyodbc.introspection import DatabaseIntrospection
 import os
 import warnings
 
