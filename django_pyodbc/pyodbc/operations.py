@@ -1,11 +1,11 @@
 from django.db.backends import BaseDatabaseOperations
-from sql_server.pyodbc import query
+from django_pyodbc.pyodbc import query
 import datetime
 import time
 import decimal
 
 class DatabaseOperations(BaseDatabaseOperations):
-    compiler_module = "sql_server.pyodbc.compiler"
+    compiler_module = "django_pyodbc.pyodbc.compiler"
     def __init__(self, connection):
         super(DatabaseOperations, self).__init__()
         self.connection = connection
@@ -339,4 +339,4 @@ class DatabaseOperations(BaseDatabaseOperations):
         elif value is not None and field and field.get_internal_type() == 'FloatField':
             value = float(value)
         return value
-        
+

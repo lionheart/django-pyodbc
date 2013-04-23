@@ -53,7 +53,7 @@ def query_class(QueryClass):
         pass
 
     class PyOdbcSSQuery(QueryClass):
-        from sql_server.pyodbc import aggregates
+        from django_pyodbc.pyodbc import aggregates
         aggregates_module = aggregates
 
         def __init__(self, *args, **kwargs):
@@ -207,7 +207,7 @@ def query_class(QueryClass):
                 if not ordering:
                     meta = self.get_meta()
                     qn = self.quote_name_unless_alias
-                    # Special case: pk not in out_cols, use random ordering. 
+                    # Special case: pk not in out_cols, use random ordering.
                     #
                     if '%s.%s' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column)) not in self.get_columns():
                         ordering = ['RAND()']
