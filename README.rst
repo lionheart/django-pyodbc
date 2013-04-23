@@ -27,28 +27,15 @@ Dependencies
 Installation
 ============
 
- 1. Install pyodbc.
+1. Install django-pyodbc.::
 
- 2. Add the directory where you have copied the project files to your Python
-    path. So, for example, if you have the following directory structure::
+       pip install django-pyodbc
 
-        /home/user/src/django-pyodbc
-            |
-            +- sql_server
-                  |
-                  +- pyodbc
+2. Now you can point the ``DATABASE_ENGINE`` setting in the settings file used
+   by your Django application or project to the ``'sql_server.pyodbc'``
+   module path::
 
-    you should add ``/home/user/src/django-pyodbc`` to you Python module search
-    path. One way to do this is setting the ``PYTHONPATH`` environment
-    variable::
-
-       $ export PYTHONPATH=/home/user/src/django-pyodbc
-
- 3. Now you can point the ``DATABASE_ENGINE`` setting in the settings file used
-    by your Django application or project to the ``'sql_server.pyodbc'``
-    module path::
-
-        DATABASE_ENGINE='sql_server.pyodbc'
+       DATABASE_ENGINE='sql_server.pyodbc'
 
 Configuration
 =============
