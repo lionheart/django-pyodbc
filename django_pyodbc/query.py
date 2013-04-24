@@ -330,7 +330,7 @@ def query_class(QueryClass):
                 # Place WHERE condition on `rn` for the desired range.
                 if self.high_mark is None:
                     self.high_mark = 9223372036854775807
-                result.append("WHERE X.rn BETWEEN {} AND {}".format(self.low_mark+1, self.high_mark)
+                result.append("WHERE X.rn BETWEEN {} AND {}".format(self.low_mark+1, self.high_mark))
 
                 return " ".join(result), params
 
