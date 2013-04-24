@@ -10,25 +10,8 @@ REV_ODIR = {
     'DESC': 'ASC'
 }
 
-SQL_SERVER_8_LIMIT_QUERY = \
-"""SELECT *
-FROM (
-  SELECT TOP %(limit)s *
-  FROM (
-    %(orig_sql)s
-    ORDER BY %(ord)s
-  ) AS %(table)s
-  ORDER BY %(rev_ord)s
-) AS %(table)s
-ORDER BY %(ord)s"""
-
-SQL_SERVER_8_NO_LIMIT_QUERY = \
-"""SELECT *
-FROM %(table)s
-WHERE %(key)s NOT IN (
-  %(orig_sql)s
-  ORDER BY %(ord)s
-)"""
+SQL_SERVER_8_LIMIT_QUERY = """SELECT * FROM (SELECT TOP {limit} * FROM ({orig_sql} ORDER BY {ord}) AS {table} ORDER BY {rev_ord}) AS {table} ORDER BY {ord}"""
+SQL_SERVER_8_NO_LIMIT_QUERY = """SELECT * FROM {table} WHERE {key} NOT IN ({orig_sql} ORDER BY {ord})"""
 
 # Strategies for handling limit+offset emulation:
 USE_ROW_NUMBER = 0 # For SQL Server >= 2005
@@ -75,10 +58,10 @@ def query_class(QueryClass):
             sql, params = self._orig_as_sql(*args, **kwargs)
             if meta.pk.db_column in self.columns and meta.pk.__class__.__name__ == "AutoField":
                 if len(self.columns) == 1 and not params:
-                    sql = "INSERT INTO %s DEFAULT VALUES" % quoted_table
+                    sql = "INSERT INTO {} DEFAULT VALUES".format(quoted_table)
                 else:
-                    sql = "SET IDENTITY_INSERT %s ON;\n%s;\nSET IDENTITY_INSERT %s OFF" % \
-                        (quoted_table, sql, quoted_table)
+                    sql = "SET IDENTITY_INSERT {} ON;\n{};\nSET IDENTITY_INSERT {} OFF" \
+                            .format(quoted_table, sql, quoted_table)
 
             return sql, params
 
@@ -87,8 +70,8 @@ def query_class(QueryClass):
             Enable pickling for this class (normal pickling handling doesn't
             work as Python can only pickle module-level classes by default).
             """
-            if hasattr(QueryClass, '__getstate__'):
-                assert hasattr(QueryClass, '__setstate__')
+            if hasattr(QueryClass, "__getstate__"):
+                assert hasattr(QueryClass, "__setstate__")
                 data = self.__getstate__()
             else:
                 data = self.__dict__
@@ -105,11 +88,11 @@ def query_class(QueryClass):
             """
             if value is None:
                 return None
-            if field and field.get_internal_type() == 'DateTimeField':
+            if field and field.get_internal_type() == "DateTimeField":
                 return value
-            elif field and field.get_internal_type() == 'DateField':
+            elif field and field.get_internal_type() == "DateField":
                 value = value.date() # extract date
-            elif field and field.get_internal_type() == 'TimeField' or (isinstance(value, datetime) and value.year == 1900 and value.month == value.day == 1):
+            elif field and field.get_internal_type() == "TimeField" or (isinstance(value, datetime) and value.year == 1900 and value.month == value.day == 1):
                 value = value.time() # extract time
             # Some cases (for example when select_related() is used) aren't
             # caught by the DateField case above and date fields arrive from
@@ -122,7 +105,7 @@ def query_class(QueryClass):
             elif isinstance(value, datetime) and value.hour == value.minute == value.second == value.microsecond == 0:
                 value = value.date()
             # Force floats to the correct type
-            elif value is not None and field and field.get_internal_type() == 'FloatField':
+            elif value is not None and field and field.get_internal_type() == "FloatField":
                 value = float(value)
             return value
 
@@ -145,49 +128,49 @@ def query_class(QueryClass):
             self.default_reverse_ordering = False
             self._ord = []
             cnt = 0
-            extra_select_aliases = [k.strip('[]') for k in self.extra_select.keys()]
+            extra_select_aliases = [k.strip("[]") for k in self.extra_select.keys()]
             for ord_spec_item in ordering:
-                if ord_spec_item.endswith(' ASC') or ord_spec_item.endswith(' DESC'):
+                if ord_spec_item.endswith(" ASC") or ord_spec_item.endswith(" DESC"):
                     parts = ord_spec_item.split()
-                    col, odir = ' '.join(parts[:-1]), parts[-1]
-                    if col not in self.ordering_aliases and col.strip('[]') not in extra_select_aliases:
+                    col, odir = " ".join(parts[:-1]), parts[-1]
+                    if col not in self.ordering_aliases and col.strip("[]") not in extra_select_aliases:
                         if col.isdigit():
                             cnt += 1
                             n = int(col)-1
-                            alias = 'OrdAlias%d' % cnt
-                            out_cols[n] = '%s AS [%s]' % (out_cols[n], alias)
+                            alias = "OrdAlias{}".format(cnt)
+                            out_cols[n] = "{} AS [{}]".format(out_cols[n], alias)
                             self._ord.append((alias, odir))
                         elif col in out_cols:
                             if strategy == USE_TOP_HMARK:
                                 cnt += 1
                                 n = out_cols.index(col)
-                                alias = 'OrdAlias%d' % cnt
-                                out_cols[n] = '%s AS %s' % (col, alias)
+                                alias = "OrdAlias{}".format(cnt)
+                                out_cols[n] = "{} AS {}".format(col, alias)
                                 self._ord.append((alias, odir))
                             else:
                                 self._ord.append((col, odir))
                         elif strategy == USE_TOP_HMARK:
                             # Special case: '_order' column created by Django
                             # when Meta.order_with_respect_to is used
-                            if col.split('.')[-1] == '[_order]' and odir == 'DESC':
+                            if col.split(".")[-1] == "[_order]" and odir == "DESC":
                                 self.default_reverse_ordering = True
                             cnt += 1
-                            alias = 'OrdAlias%d' % cnt
+                            alias = "OrdAlias{}".format(cnt)
                             self._ord.append((alias, odir))
-                            self.ordering_aliases.append('%s AS [%s]' % (col, alias))
+                            self.ordering_aliases.append("{} AS [{}]".format(col, alias))
                         else:
                             self._ord.append((col, odir))
                     else:
                         self._ord.append((col, odir))
 
-            if strategy == USE_ROW_NUMBER and not self._ord and 'RAND()' in ordering:
-                self._ord.append(('RAND()',''))
+            if strategy == USE_ROW_NUMBER and not self._ord and "RAND()" in ordering:
+                self._ord.append(("RAND()", ""))
             if strategy == USE_TOP_HMARK and not self._ord:
                 # XXX:
                 #meta = self.get_meta()
                 meta = self.model._meta
                 qn = self.quote_name_unless_alias
-                pk_col = '%s.%s' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column))
+                pk_col = "{}.{}".format(qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column))
                 if pk_col not in out_cols:
                     out_cols.append(pk_col)
 
@@ -209,20 +192,20 @@ def query_class(QueryClass):
                     qn = self.quote_name_unless_alias
                     # Special case: pk not in out_cols, use random ordering.
                     #
-                    if '%s.%s' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column)) not in self.get_columns():
-                        ordering = ['RAND()']
+                    if "{}.{}".format(qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column)) not in self.get_columns():
+                        ordering = ["RAND()"]
                         # XXX: Maybe use group_by field for ordering?
                         #if self.group_by:
                             #ordering = ['%s.%s ASC' % (qn(self.group_by[0][0]),qn(self.group_by[0][1]))]
                     else:
-                        ordering = ['%s.%s ASC' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column))]
+                        ordering = ["{}.{} ASC".format(qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column))]
 
             if strategy in (USE_TOP_HMARK, USE_ROW_NUMBER):
                 self.modify_query(strategy, ordering, out_cols)
 
             if strategy == USE_ROW_NUMBER:
-                ord = ', '.join(['%s %s' % pair for pair in self._ord])
-                self.ordering_aliases.append('(ROW_NUMBER() OVER (ORDER BY %s)) AS [rn]' % ord)
+                ord = ", ".join(["{} {}".format(pair) for pair in self._ord])
+                self.ordering_aliases.append("(ROW_NUMBER() OVER (ORDER BY {})) AS [rn]".format(ord))
 
             # This must come after 'select' and 'ordering' -- see docstring of
             # get_from_clause() for details.
@@ -235,33 +218,33 @@ def query_class(QueryClass):
             for val in self.extra_select.itervalues():
                 params.extend(val[1])
 
-            result = ['SELECT']
+            result = ["SELECT"]
             if self.distinct:
-                result.append('DISTINCT')
+                result.append("DISTINCT")
 
             if strategy == USE_TOP_LMARK:
                 # XXX:
                 #meta = self.get_meta()
                 meta = self.model._meta
-                result.append('TOP %s %s' % (self.low_mark, self.quote_name_unless_alias(meta.pk.db_column or meta.pk.column)))
+                result.append("TOP {} {}".format(self.low_mark, self.quote_name_unless_alias(meta.pk.db_column or meta.pk.column)))
             else:
                 if strategy == USE_TOP_HMARK and self.high_mark is not None:
-                    result.append('TOP %s' % self.high_mark)
-                result.append(', '.join(out_cols + self.ordering_aliases))
+                    result.append("TOP {}".format(self.high_mark))
+                result.append(", ".join(out_cols + self.ordering_aliases))
 
-            result.append('FROM')
+            result.append("FROM")
             result.extend(from_)
             params.extend(f_params)
 
             if where:
-                result.append('WHERE %s' % where)
+                result.append("WHERE {}".format(where))
                 params.extend(w_params)
             if self.extra_where:
                 if not where:
-                    result.append('WHERE')
+                    result.append("WHERE")
                 else:
-                    result.append('AND')
-                result.append(' AND '.join(self.extra_where))
+                    result.append("AND")
+                result.append(" AND ".join(self.extra_where))
 
             grouping, gb_params = self.get_grouping()
             if grouping:
@@ -276,15 +259,15 @@ def query_class(QueryClass):
                                 gb_params.extend(col_params)
                 else:
                     ordering = self.connection.ops.force_no_ordering()
-                result.append('GROUP BY %s' % ', '.join(grouping))
+                result.append("GROUP BY {}".format(", ".join(grouping)))
                 params.extend(gb_params)
 
             if having:
-                result.append('HAVING %s' % having)
+                result.append("HAVING {}".format(having))
                 params.extend(h_params)
 
             params.extend(self.extra_params)
-            return ' '.join(result), tuple(params)
+            return " ".join(result), tuple(params)
 
         def as_sql(self, with_limits=True, with_col_aliases=False):
             """
@@ -312,29 +295,28 @@ def query_class(QueryClass):
             #meta = self.get_meta()
             meta = self.model._meta
             qn = self.quote_name_unless_alias
-            fallback_ordering = '%s.%s' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column))
+            fallback_ordering = "{}.{}".format(qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column))
 
             # SQL Server 2000, offset+limit case
             if self.connection.ops.sql_server_ver < 2005 and self.high_mark is not None:
                 orig_sql, params = self._as_sql(USE_TOP_HMARK)
                 if self._ord:
-                    ord = ', '.join(['%s %s' % pair for pair in self._ord])
-                    rev_ord = ', '.join(['%s %s' % (col, REV_ODIR[odir]) for col, odir in self._ord])
+                    ord = ", ".join(["{} {}".format(pair) for pair in self._ord])
+                    rev_ord = ", ".join(["{} {}".format(col, REV_ODIR[odir]) for col, odir in self._ord])
                 else:
                     if not self.default_reverse_ordering:
-                        ord = '%s ASC' % fallback_ordering
-                        rev_ord = '%s DESC' % fallback_ordering
+                        ord = "{} ASC".format(fallback_ordering)
+                        rev_ord = "{} DESC".format(fallback_ordering)
                     else:
-                        ord = '%s DESC' % fallback_ordering
-                        rev_ord = '%s ASC' % fallback_ordering
-                sql = SQL_SERVER_8_LIMIT_QUERY % {
-                    'limit': self.high_mark - self.low_mark,
-                    'orig_sql': orig_sql,
-                    'ord': ord,
-                    'rev_ord': rev_ord,
-                    # XXX:
-                    'table': qn(meta.db_table),
-                }
+                        ord = "{} DESC".format(fallback_ordering)
+                        rev_ord = "{} ASC".format(fallback_ordering)
+
+                sql = SQL_SERVER_8_LIMIT_QUERY.format(
+                        limit=self.high_mark - self.low_mark,
+                        orig_sql=orig_sql,
+                        ord=ord,
+                        rev_ord=rev_ord,
+                        table=qn(meta.db_table))
                 return sql, params
 
             # SQL Server 2005
@@ -343,14 +325,14 @@ def query_class(QueryClass):
 
                 # Construct the final SQL clause, using the initial select SQL
                 # obtained above.
-                result = ['SELECT * FROM (%s) AS X' % sql]
+                result = ["SELECT * FROM ({}) AS X".format(sql)]
 
                 # Place WHERE condition on `rn` for the desired range.
                 if self.high_mark is None:
                     self.high_mark = 9223372036854775807
-                result.append('WHERE X.rn BETWEEN %d AND %d' % (self.low_mark+1, self.high_mark))
+                result.append("WHERE X.rn BETWEEN {} AND {}".format(self.low_mark+1, self.high_mark)
 
-                return ' '.join(result), params
+                return " ".join(result), params
 
             # SQL Server 2000, offset without limit case
             # get_columns needs to be called before get_ordering to populate
@@ -358,17 +340,18 @@ def query_class(QueryClass):
             self.get_columns(with_col_aliases)
             ordering, ordering_group_by = self.get_ordering()
             if ordering:
-                ord = ', '.join(ordering)
+                ord = ", ".join(ordering)
             else:
                 # We need to define an ordering clause since none was provided
                 ord = fallback_ordering
             orig_sql, params = self._as_sql(USE_TOP_LMARK)
-            sql = SQL_SERVER_8_NO_LIMIT_QUERY % {
-                'orig_sql': orig_sql,
-                'ord': ord,
-                'table': qn(meta.db_table),
-                'key': qn(meta.pk.db_column or meta.pk.column),
-            }
+
+            sql = SQL_SERVER_8_NO_LIMIT_QUERY.format(
+                    orig_sql=orig_sql,
+                    ord=ord,
+                    table=qn(meta.db_table),
+                    key=qn(meta.pk.db_column or meta.pk.column))
+
             return sql, params
 
 
