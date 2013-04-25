@@ -113,8 +113,8 @@ Credits
 -------
 
 * Dan Loewenherz
-* Filip Wasilewski (http://code.djangoproject.com/ticket/5246)
-* Ramiro Morales `<http://djangopeople.net/ramiro/>`_
-* Wei guangjing `<http://djangopeople.net/vcc/>`_
-* mamcx (http://code.djangoproject.com/ticket/5062)
+* [Filip Wasilewski](http://code.djangoproject.com/ticket/5246)
+* [Ramiro Morales](http://djangopeople.net/ramiro/)
+* [Wei guangjing](http://djangopeople.net/vcc/)
+* [mamcx](http://code.djangoproject.com/ticket/5062)
 
