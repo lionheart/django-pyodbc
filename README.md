@@ -1,15 +1,12 @@
-=============
 django-pyodbc
 =============
 
-A Django_ MS SQL Server external DB backend that uses ODBC by employing
-the pyodbc_ library. It supports SQL Server 2000 and 2005.
-
-.. _Django: http://djangoproject.com/
-.. _pyodbc: http://pyodbc.sourceforge.net
+A [Django](http://djangoproject.com) MS SQL Server external DB backend that
+uses ODBC by employing the [pyodbc](http://pyodbc.sourceforge.net) library. It
+supports SQL Server 2000 and 2005.
 
 Features
-========
+--------
 
 * Supports LIMIT+OFFSET and offset w/o LIMIT emulation under SS2005.
 * Supports LIMIT+OFFSET under SS2000.
@@ -19,58 +16,54 @@ Features
   (Windows) and FreeTDS ODBC drivers (Linux).
 
 Dependencies
-============
+------------
 
 * Django from SVN, revision 8328 or newer (1.0 is r8961.)
 * pyodbc 2.0.58 or newer
 
 Installation
-============
+------------
 
-1. Install django-pyodbc.::
+1. Install django-pyodbc.
 
        pip install django-pyodbc
 
-2. Now you can now add a database to your settings using standard ODBC parameters.::
+2. Now you can now add a database to your settings using standard ODBC parameters.
 
-       DATABASES = {
-           'default': {
-               'ENGINE': "django_pyodbc",
-               'HOST': "127.0.0.1,1433",
-               'USER': "mssql_user",
-               'PASSWORD': "mssql_password",
-               'NAME': "database_name",
-               'OPTIONS': {
-                   'host_is_server': True
-               },
-           }
+    ```python
+    DATABASES = {
+       'default': {
+           'ENGINE': "django_pyodbc",
+           'HOST': "127.0.0.1,1433",
+           'USER': "mssql_user",
+           'PASSWORD': "mssql_password",
+           'NAME': "database_name",
+           'OPTIONS': {
+               'host_is_server': True
+           },
        }
+    }
+    ```
 
 3. That's all!
 
 Configuration
-=============
+-------------
 
 The following settings control the behavior of the backend:
 
-Standard Django settings
-------------------------
+### Standard Django settings
 
-``NAME``
-    String. Database name. Required.
+`NAME` String. Database name. Required.
 
-``HOST``
-    String. SQL Server instance in ``server\instance`` or ``ip,port`` format.
+`HOST` String. SQL Server instance in `server\instance` or `ip,port` format.
 
-``USER``
-    String. Database user name. If not given then MS Integrated Security will
-    be used.
+`USER` String. Database user name. If not given then MS Integrated Security
+    will be used.
 
-``PASSWORD``
-    String. Database user password.
+`PASSWORD` String. Database user password.
 
-``OPTIONS``
-    Dictionary. Current available keys are:
+`OPTIONS` Dictionary. Current available keys are:
 
     ``autocommit``
         Boolean. Indicates if pyodbc should direct the the ODBC driver to
