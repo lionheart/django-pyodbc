@@ -15,18 +15,12 @@ Features
 * Compatible with SQL Server and SQL Server Native Client from Microsoft
   (Windows) and FreeTDS ODBC drivers (Linux).
 
-Dependencies
-------------
-
-* Django from SVN, revision 8328 or newer (1.0 is r8961.)
-* pyodbc 2.0.58 or newer
-
 Installation
 ------------
 
 1. Install django-pyodbc.
 
-       pip install django-pyodbc
+    pip install django-pyodbc
 
 2. Now you can now add a database to your settings using standard ODBC parameters.
 
@@ -54,9 +48,11 @@ The following settings control the behavior of the backend:
 
 ### Standard Django settings
 
-`NAME` String. Database name. Required.
+#### NAME
 
-`HOST` String. SQL Server instance in `server\instance` or `ip,port` format.
+String. Database name. Required.
+
+*HOST* String. SQL Server instance in `server\instance` or `ip,port` format.
 
 `USER` String. Database user name. If not given then MS Integrated Security
     will be used.
@@ -112,12 +108,12 @@ The following settings control the behavior of the backend:
     For Chinese language you can set it to ``"Chinese_PRC_CI_AS"``.
 
 License
-=======
+-------
 
 See LICENSE.
 
 Credits
-=======
+-------
 
 * Dan Loewenherz
 * Filip Wasilewski (http://code.djangoproject.com/ticket/5246)
