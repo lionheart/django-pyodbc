@@ -31,11 +31,22 @@ Installation
 
        pip install django-pyodbc
 
-2. Now you can point the ``DATABASE_ENGINE`` setting in the settings file used
-   by your Django application or project to the ``'sql_server.pyodbc'``
-   module path::
+2. Now you can now add a database to your settings using standard ODBC parameters.::
 
-       DATABASE_ENGINE='sql_server.pyodbc'
+       DATABASES = {
+           'default': {
+               'ENGINE': "django_pyodbc",
+               'HOST': "127.0.0.1,1433",
+               'USER': "mssql_user",
+               'PASSWORD': "mssql_password",
+               'NAME': "database_name",
+               'OPTIONS': {
+                   'host_is_server': True
+               },
+           }
+       }
+
+3. That's all!
 
 Configuration
 =============
@@ -45,23 +56,20 @@ The following settings control the behavior of the backend:
 Standard Django settings
 ------------------------
 
-``DATABASE_NAME``
+``NAME``
     String. Database name. Required.
 
-``DATABASE_HOST``
-    String. SQL Server instance in ``"server\instance"`` format.
+``HOST``
+    String. SQL Server instance in ``server\instance`` or ``ip,port`` format.
 
-``DATABASE_PORT``
-    String. Server instance port.
-
-``DATABASE_USER``
+``USER``
     String. Database user name. If not given then MS Integrated Security will
     be used.
 
-``DATABASE_PASSWORD``
+``PASSWORD``
     String. Database user password.
 
-``DATABASE_OPTIONS``
+``OPTIONS``
     Dictionary. Current available keys are:
 
     ``autocommit``
@@ -80,7 +88,7 @@ Standard Django settings
         Unix/Linux.
 
         By default, when using the FreeTDS ODBC driver the value specified in
-        the ``DATABASE_HOST`` setting is used in a ``SERVERNAME`` ODBC
+        the ``HOST`` setting is used in a ``SERVERNAME`` ODBC
         connection string component instead of being used in a ``SERVER``
         component; this means that this value should be the name of a
         *dataserver* definition present in the ``freetds.conf`` FreeTDS
@@ -94,18 +102,18 @@ Standard Django settings
 ``django-pyodbc``-specific settings
 -----------------------------------
 
-``DATABASE_ODBC_DSN``
+``ODBC_DSN``
     String. A named DSN can be used instead of ``DATABASE_HOST``.
 
-``DATABASE_ODBC_DRIVER``
+``ODBC_DRIVER``
     String. ODBC Driver to use. Default is ``"SQL Server"`` on Windows and
     ``"FreeTDS"`` on other platforms.
 
-``DATABASE_EXTRA_PARAMS``
+``EXTRA_PARAMS``
     String. Additional parameters for the ODBC connection. The format is
     ``"param=value;param=value"``.
 
-``DATABASE_COLLATION``
+``COLLATION``
     String. Name of the collation to use when performing text field lookups
     against the database. Default value is ``"Latin1_General_CI_AS"``.
     For Chinese language you can set it to ``"Chinese_PRC_CI_AS"``.
@@ -113,12 +121,14 @@ Standard Django settings
 License
 =======
 
-New BSD LICENSE
+See LICENSE.
 
 Credits
 =======
 
-* Ramiro Morales `<http://djangopeople.net/ramiro/>`_
+* Dan Loewenherz
 * Filip Wasilewski (http://code.djangoproject.com/ticket/5246)
+* Ramiro Morales `<http://djangopeople.net/ramiro/>`_
 * Wei guangjing `<http://djangopeople.net/vcc/>`_
 * mamcx (http://code.djangoproject.com/ticket/5062)
+
