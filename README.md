@@ -20,7 +20,7 @@ Installation
 
 1. Install django-pyodbc.
 
-    pip install django-pyodbc
+        pip install django-pyodbc
 
 2. Now you can now add a database to your settings using standard ODBC parameters.
 
