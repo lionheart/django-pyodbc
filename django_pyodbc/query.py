@@ -4,6 +4,7 @@ Derives from: django.db.models.sql.query.Query
 """
 
 from datetime import datetime
+from django_pyodbc import aggregates as pyodbc_aggregates
 
 REV_ODIR = {
     'ASC': 'DESC',
@@ -36,8 +37,7 @@ def query_class(QueryClass):
         pass
 
     class PyOdbcSSQuery(QueryClass):
-        from django_pyodbc import aggregates
-        aggregates_module = aggregates
+        aggregates_module = pyodbc_aggregates
 
         def __init__(self, *args, **kwargs):
             super(PyOdbcSSQuery, self).__init__(*args, **kwargs)

@@ -2,13 +2,17 @@
 MS SQL Server database backend for Django.
 """
 
+import logging
+import os
+import re
+import warnings
+
 try:
     import pyodbc as Database
 except ImportError, e:
     from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured("Error loading pyodbc module: %s" % e)
 
-import re
 m = re.match(r'(\d+)\.(\d+)\.(\d+)(?:-beta(\d+))?', Database.version)
 vlist = list(m.groups())
 if vlist[3] is None: vlist[3] = '9999'
@@ -41,10 +45,10 @@ from django_pyodbc.operations import DatabaseOperations
 from django_pyodbc.client import DatabaseClient
 from django_pyodbc.creation import DatabaseCreation
 from django_pyodbc.introspection import DatabaseIntrospection
-import os
-import warnings
 
 warnings.filterwarnings('error', 'The DATABASE_ODBC.+ is deprecated', DeprecationWarning, __name__, 0)
+
+logger = logging.getLogger(__name__)
 
 try:
     if hasattr(settings, 'DATABASE_COLLATION'):
