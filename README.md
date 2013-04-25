@@ -48,11 +48,9 @@ The following settings control the behavior of the backend:
 
 ### Standard Django settings
 
-#### NAME
+`NAME` String. Database name. Required.
 
-String. Database name. Required.
-
-*HOST* String. SQL Server instance in `server\instance` or `ip,port` format.
+`HOST` String. SQL Server instance in `server\instance` or `ip,port` format.
 
 `USER` String. Database user name. If not given then MS Integrated Security
     will be used.
@@ -88,8 +86,7 @@ String. Database name. Required.
 
         See http://freetds.org/userguide/dsnless.htm for more information.
 
-``django-pyodbc``-specific settings
------------------------------------
+### ``django-pyodbc``-specific settings
 
 ``ODBC_DSN``
     String. A named DSN can be used instead of ``DATABASE_HOST``.
