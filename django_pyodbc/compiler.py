@@ -33,7 +33,7 @@ USE_TOP_LMARK = 2 # For SQL Server 2000 when offset but no limit is provided
 
 
 class SQLCompiler(compiler.SQLCompiler):
-    
+
     def resolve_columns(self, row, fields=()):
         index_start = len(self.query.extra_select.keys())
         values = [self.query.convert_values(v, None, connection=self.connection) for v in row[:index_start]]
@@ -115,7 +115,7 @@ class SQLCompiler(compiler.SQLCompiler):
             if not ordering:
                 meta = self.query.get_meta()
                 qn = self.quote_name_unless_alias
-                # Special case: pk not in out_cols, use random ordering. 
+                # Special case: pk not in out_cols, use random ordering.
                 #
                 if '%s.%s' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column)) not in self.get_columns():
                     ordering = ['RAND()']
@@ -165,7 +165,7 @@ class SQLCompiler(compiler.SQLCompiler):
             result.append('WHERE %s' % where)
             params.extend(w_params)
 
-        grouping, gb_params = self.get_grouping()
+        grouping, gb_params = self.get_grouping(ordering_group_by)
         if grouping:
             if ordering:
                 # If the backend can't group by PK (i.e., any database
@@ -241,7 +241,7 @@ class SQLCompiler(compiler.SQLCompiler):
         # SQL Server 2005
         if self.connection.ops.sql_server_ver >= 2005:
             sql, params = self._as_sql(USE_ROW_NUMBER)
-            
+
             # Construct the final SQL clause, using the initial select SQL
             # obtained above.
             result = ['SELECT * FROM (%s) AS X' % sql]
@@ -288,7 +288,7 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
         result.append('VALUES (%s)' % ', '.join(values))
         params = self.query.params
         sql = ' '.join(result)
-        
+
         meta = self.query.get_meta()
         if meta.has_auto_field:
             # db_column is None if not explicitly specified by model field
