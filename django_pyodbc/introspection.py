@@ -7,7 +7,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
     # Map type codes to Django Field types.
     data_types_reverse = {
         SQL_AUTOFIELD:                  'AutoField',
-        Database.SQL_BIGINT:            'IntegerField',
+        Database.SQL_BIGINT:            'BigIntegerField',
         #Database.SQL_BINARY:            ,
         Database.SQL_BIT:               'BooleanField',
         Database.SQL_CHAR:              'CharField',
