@@ -112,7 +112,8 @@ See LICENSE.
 Credits
 -------
 
-* Dan Loewenherz
+* [Alex Vidal](https://github.com/avidal)
+* [Dan Loewenherz](http://dlo.me)
 * [Filip Wasilewski](http://code.djangoproject.com/ticket/5246)
 * [Ramiro Morales](http://djangopeople.net/ramiro/)
 * [Wei guangjing](http://djangopeople.net/vcc/)
