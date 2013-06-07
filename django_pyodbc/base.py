@@ -98,6 +98,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     #   CONTAINS:       http://msdn2.microsoft.com/en-us/library/ms187787.aspx
     #   FREETEXT:       http://msdn2.microsoft.com/en-us/library/ms176078.aspx
 
+    vendor = 'microsoft'
     operators = {
         # Since '=' is used not only for string comparision there is no way
         # to make it case (in)sensitive. It will simply fallback to the
@@ -246,14 +247,15 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 self.creation.data_types['TextField'] = 'ntext'
                 self.features.can_return_id_from_insert = False
 
+            ms_sqlncli = re.compile('^((LIB)?SQLN?CLI|LIBMSODBCSQL)')
             if self.driver_needs_utf8 is None:
                 self.driver_needs_utf8 = True
                 self.drv_name = self.connection.getinfo(Database.SQL_DRIVER_NAME).upper()
-                if self.drv_name in ('SQLSRV32.DLL', 'SQLNCLI.DLL', 'SQLNCLI10.DLL'):
+                if self.drv_name == 'SQLSRV32.DLL' or ms_sqlncli.match(self.drv_name):
                     self.driver_needs_utf8 = False
 
                 # http://msdn.microsoft.com/en-us/library/ms131686.aspx
-                if self.ops.sql_server_ver >= 2005 and self.drv_name in ('SQLNCLI.DLL', 'SQLNCLI10.DLL') and self.MARS_Connection:
+                if self.ops.sql_server_ver >= 2005 and ms_sqlncli.match(self.drv_name) and self.MARS_Connection:
                     # How to to activate it: Add 'MARS_Connection': True
                     # to the DATABASE_OPTIONS dictionary setting
                     self.features.can_use_chunked_reads = True
