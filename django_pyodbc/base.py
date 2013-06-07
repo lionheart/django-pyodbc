@@ -25,19 +25,18 @@ from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDa
 from django.db.backends.signals import connection_created
 from django.conf import settings
 from django import VERSION as DjangoVersion
-if DjangoVersion[:2] == (1,2):
-    from django import get_version
-    version_str = get_version()
-    if 'SVN' in version_str and int(version_str.split('SVN-')[-1]) < 11952: # django trunk revision 11952 Added multiple database support.
-        _DJANGO_VERSION = 11
-    else:
-        _DJANGO_VERSION = 12
+if DjangoVersion[:2] >= (1,5):
+    _DJANGO_VERSION = 15
+elif DjangoVersion[:2] == (1,4):
+    _DJANGO_VERSION = 14
+elif DjangoVersion[:2] == (1,3):
+    _DJANGO_VERSION = 13
+elif DjangoVersion[:2] == (1,2):
+    _DJANGO_VERSION = 12
 elif DjangoVersion[:2] == (1,1):
     _DJANGO_VERSION = 11
 elif DjangoVersion[:2] == (1,0):
     _DJANGO_VERSION = 10
-elif DjangoVersion[0] == 1:
-    _DJANGO_VERSION = 13
 else:
     _DJANGO_VERSION = 9
 
@@ -85,6 +84,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
 
 
 class DatabaseWrapper(BaseDatabaseWrapper):
+    _DJANGO_VERSION = _DJANGO_VERSION
     drv_name = None
     driver_needs_utf8 = None
     MARS_Connection = False

@@ -165,7 +165,10 @@ class SQLCompiler(compiler.SQLCompiler):
             result.append('WHERE %s' % where)
             params.extend(w_params)
 
-        grouping, gb_params = self.get_grouping(ordering_group_by)
+        if self.connection._DJANGO_VERSION >= 15:
+            grouping, gb_params = self.get_grouping(ordering_group_by)
+        else:
+            grouping, gb_params = self.get_grouping()
         if grouping:
             if ordering:
                 # If the backend can't group by PK (i.e., any database
