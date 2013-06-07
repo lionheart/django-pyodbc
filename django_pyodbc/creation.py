@@ -52,10 +52,20 @@ class DatabaseCreation(BaseDatabaseCreation):
     def _destroy_test_db(self, test_database_name, verbosity):
         "Internal implementation - remove the test db tables."
         cursor = self.connection.cursor()
-        self.set_autocommit()
+        self.connection.connection.autocommit = True
         #time.sleep(1) # To avoid "database is being accessed by other users" errors.
         cursor.execute("ALTER DATABASE %s SET SINGLE_USER WITH ROLLBACK IMMEDIATE " % \
                 self.connection.ops.quote_name(test_database_name))
         cursor.execute("DROP DATABASE %s" % \
                 self.connection.ops.quote_name(test_database_name))
         self.connection.close()
+
+    def _prepare_for_test_db_ddl(self):
+        self.connection.connection.rollback()
+        self.connection.connection.autocommit = True
+
+    def sql_table_creation_suffix(self):
+        suffix = []
+        if self.connection.settings_dict['TEST_COLLATION']:
+            suffix.append('COLLATE %s' % self.connection.settings_dict['TEST_COLLATION'])
+        return ' '.join(suffix)
