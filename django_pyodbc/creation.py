@@ -26,6 +26,7 @@ class DatabaseCreation(BaseDatabaseCreation):
     data_types = DataTypesWrapper({
     #data_types = {
         'AutoField':         'int IDENTITY (1, 1)',
+        'BigIntegerField':   'bigint',
         'BooleanField':      'bit',
         'CharField':         'nvarchar(%(max_length)s)',
         'CommaSeparatedIntegerField': 'nvarchar(%(max_length)s)',
@@ -35,8 +36,8 @@ class DatabaseCreation(BaseDatabaseCreation):
         'FileField':         'nvarchar(%(max_length)s)',
         'FilePathField':     'nvarchar(%(max_length)s)',
         'FloatField':        'double precision',
+        'GenericIPAddressField': 'nvarchar(39)',
         'IntegerField':      'int',
-        'BigIntegerField':   'bigint',
         'IPAddressField':    'nvarchar(15)',
         'NullBooleanField':  'bit',
         'OneToOneField':     'int',
