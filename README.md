@@ -8,7 +8,7 @@ supports SQL Server 2000 and 2005.
 Features
 --------
 
-* Supports Django 1.2 or newer.
+* Supports Django 1.4 or newer.
 * Supports LIMIT+OFFSET and offset w/o LIMIT emulation under SS2005.
 * Supports LIMIT+OFFSET under SS2000.
 * Transparently supports Django's TextField both under SS2000 and SS2005.
