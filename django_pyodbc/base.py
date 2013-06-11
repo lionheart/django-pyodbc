@@ -188,13 +188,20 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 else:
                     driver = 'FreeTDS'
 
+            # Microsoft driver names assumed here are:
+            # * SQL Server
+            # * SQL Native Client
+            # * SQL Server Native Client 10.0/11.0
+            # * ODBC Driver 11 for SQL Server
+            ms_drivers = re.compile('.*SQL (Server$|(Server )?Native Client)')
+
             if 'dsn' in options:
                 cstr_parts.append('DSN=%s' % options['dsn'])
             else:
                 # Only append DRIVER if DATABASE_ODBC_DSN hasn't been set
                 cstr_parts.append('DRIVER={%s}' % driver)
 
-                if os.name == 'nt' or driver == 'FreeTDS' and \
+                if ms_drivers.match(driver) or driver == 'FreeTDS' and \
                         options.get('host_is_server', False):
                     if port_str:
                         host_str += ';PORT=%s' % port_str
@@ -205,7 +212,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             if user_str:
                 cstr_parts.append('UID=%s;PWD=%s' % (user_str, passwd_str))
             else:
-                if driver in ('SQL Server', 'SQL Native Client'):
+                if ms_drivers.match(driver):
                     cstr_parts.append('Trusted_Connection=yes')
                 else:
                     cstr_parts.append('Integrated Security=SSPI')
