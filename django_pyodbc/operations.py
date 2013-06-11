@@ -1,5 +1,4 @@
 from django.db.backends import BaseDatabaseOperations
-from django_pyodbc import query
 import datetime
 import time
 import decimal
@@ -7,7 +6,11 @@ import decimal
 class DatabaseOperations(BaseDatabaseOperations):
     compiler_module = "django_pyodbc.compiler"
     def __init__(self, connection):
-        super(DatabaseOperations, self).__init__(connection)
+        if connection._DJANGO_VERSION >= 14:
+            super(DatabaseOperations, self).__init__(connection)
+        else:
+            super(DatabaseOperations, self).__init__()
+
         self.connection = connection
         self._ss_ver = None
 
@@ -110,15 +113,6 @@ class DatabaseOperations(BaseDatabaseOperations):
         if lookup_type in ('iexact', 'icontains', 'istartswith', 'iendswith'):
             return "UPPER(%s)"
         return "%s"
-
-    def query_class(self, DefaultQueryClass):
-        """
-        Given the default Query class, returns a custom Query class
-        to use for this backend. Returns None if a custom Query isn't used.
-        See also BaseDatabaseFeatures.uses_custom_query_class, which regulates
-        whether this method is called at all.
-        """
-        return query.query_class(DefaultQueryClass)
 
     def quote_name(self, name):
         """

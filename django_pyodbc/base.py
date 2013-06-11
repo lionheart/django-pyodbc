@@ -33,12 +33,8 @@ elif DjangoVersion[:2] == (1,3):
     _DJANGO_VERSION = 13
 elif DjangoVersion[:2] == (1,2):
     _DJANGO_VERSION = 12
-elif DjangoVersion[:2] == (1,1):
-    _DJANGO_VERSION = 11
-elif DjangoVersion[:2] == (1,0):
-    _DJANGO_VERSION = 10
 else:
-    _DJANGO_VERSION = 9
+    raise ImproperlyConfigured("Django %d.%d is not supported." % DjangoVersion[:2])
 
 from django_pyodbc.operations import DatabaseOperations
 from django_pyodbc.client import DatabaseClient
@@ -49,6 +45,7 @@ warnings.filterwarnings('error', 'The DATABASE_ODBC.+ is deprecated', Deprecatio
 
 logger = logging.getLogger(__name__)
 
+collation = 'Latin1_General_CI_AS'
 try:
     if hasattr(settings, 'DATABASE_COLLATION'):
         warnings.warn(
@@ -59,7 +56,7 @@ try:
     elif 'collation' in settings.DATABASE_OPTIONS:
         collation = settings.DATABASE_OPTIONS['collation']
 except AttributeError:
-    collation = 'Latin1_General_CI_AS'
+    pass
 
 deprecated = (
     ('DATABASE_ODBC_DRIVER', 'driver'),
@@ -77,7 +74,6 @@ DatabaseError = Database.DatabaseError
 IntegrityError = Database.IntegrityError
 
 class DatabaseFeatures(BaseDatabaseFeatures):
-    uses_custom_query_class = True
     can_use_chunked_reads = False
     can_return_id_from_insert = True
     #uses_savepoints = True
@@ -141,10 +137,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         self.client = DatabaseClient(self)
         self.creation = DatabaseCreation(self)
         self.introspection = DatabaseIntrospection(self)
-        if _DJANGO_VERSION >= 12:
-            self.validation = BaseDatabaseValidation(self)
-        else:
-            self.validation = BaseDatabaseValidation()
+        self.validation = BaseDatabaseValidation(self)
 
         self.connection = None
 
