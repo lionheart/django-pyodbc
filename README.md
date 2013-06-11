@@ -60,6 +60,13 @@ The following settings control the behavior of the backend:
 
 `OPTIONS` Dictionary. Current available keys are:
 
+    ``driver``
+        String. ODBC Driver to use. Default is ``"SQL Server"`` on Windows and
+        ``"FreeTDS"`` on other platforms.
+
+    ``dsn``
+        String. A named DSN can be used instead of ``HOST``.
+
     ``autocommit``
         Boolean. Indicates if pyodbc should direct the the ODBC driver to
         activate the autocommit feature. Default value is ``False``.
@@ -67,7 +74,7 @@ The following settings control the behavior of the backend:
     ``MARS_Connection``
         Boolean. Only relevant when running on Windows and with SQL Server 2005
         or later through MS *SQL Server Native client* driver (i.e. setting
-	``DATABASE_ODBC_DRIVER`` to ``"SQL Native Client"``). See
+        ``driver`` to ``"SQL Server Native Client 11.0"``). See
         http://msdn.microsoft.com/en-us/library/ms131686.aspx.
         Default value is ``False``.
 
@@ -87,23 +94,15 @@ The following settings control the behavior of the backend:
 
         See http://freetds.org/userguide/dsnless.htm for more information.
 
-### ``django-pyodbc``-specific settings
+    ``extra_params``
+        String. Additional parameters for the ODBC connection. The format is
+        ``"param=value;param=value"``.
 
-``ODBC_DSN``
-    String. A named DSN can be used instead of ``DATABASE_HOST``.
-
-``ODBC_DRIVER``
-    String. ODBC Driver to use. Default is ``"SQL Server"`` on Windows and
-    ``"FreeTDS"`` on other platforms.
-
-``EXTRA_PARAMS``
-    String. Additional parameters for the ODBC connection. The format is
-    ``"param=value;param=value"``.
-
-``COLLATION``
-    String. Name of the collation to use when performing text field lookups
-    against the database. Default value is ``"Latin1_General_CI_AS"``.
-    For Chinese language you can set it to ``"Chinese_PRC_CI_AS"``.
+    ``collation``
+        String. Name of the collation to use when performing text field lookups
+        against the database. For Chinese language you can set it to 
+        ``"Chinese_PRC_CI_AS"``. The default collation for the database
+        will be used if no value is specified.
 
 License
 -------

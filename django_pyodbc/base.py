@@ -1,16 +1,14 @@
 """
 MS SQL Server database backend for Django.
 """
-
-import logging
 import os
 import re
-import warnings
+
+from django.core.exceptions import ImproperlyConfigured
 
 try:
     import pyodbc as Database
 except ImportError, e:
-    from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured("Error loading pyodbc module: %s" % e)
 
 m = re.match(r'(\d+)\.(\d+)\.(\d+)(?:-beta(\d+))?', Database.version)
@@ -18,7 +16,6 @@ vlist = list(m.groups())
 if vlist[3] is None: vlist[3] = '9999'
 pyodbc_ver = tuple(map(int, vlist))
 if pyodbc_ver < (2, 0, 38, 9999):
-    from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured("pyodbc 2.0.38 or newer is required; you have %s" % Database.version)
 
 from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDatabaseValidation
@@ -40,35 +37,6 @@ from django_pyodbc.operations import DatabaseOperations
 from django_pyodbc.client import DatabaseClient
 from django_pyodbc.creation import DatabaseCreation
 from django_pyodbc.introspection import DatabaseIntrospection
-
-warnings.filterwarnings('error', 'The DATABASE_ODBC.+ is deprecated', DeprecationWarning, __name__, 0)
-
-logger = logging.getLogger(__name__)
-
-collation = 'Latin1_General_CI_AS'
-try:
-    if hasattr(settings, 'DATABASE_COLLATION'):
-        warnings.warn(
-            "The DATABASE_COLLATION setting is going to be deprecated, use DATABASE_OPTIONS['collation'] instead.",
-            DeprecationWarning
-        )
-        collation = settings.DATABASE_COLLATION
-    elif 'collation' in settings.DATABASE_OPTIONS:
-        collation = settings.DATABASE_OPTIONS['collation']
-except AttributeError:
-    pass
-
-deprecated = (
-    ('DATABASE_ODBC_DRIVER', 'driver'),
-    ('DATABASE_ODBC_DSN', 'dsn'),
-    ('DATABASE_ODBC_EXTRA_PARAMS', 'extra_params'),
-)
-for old, new in deprecated:
-    if hasattr(settings, old):
-        warnings.warn(
-            "The %s setting is deprecated, use DATABASE_OPTIONS['%s'] instead." % (old, new),
-            DeprecationWarning
-        )
 
 DatabaseError = Database.DatabaseError
 IntegrityError = Database.IntegrityError
@@ -101,22 +69,22 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         # database collation.
         'exact': '= %s',
         'iexact': "= UPPER(%s)",
-        'contains': "LIKE %s ESCAPE '\\' COLLATE " + collation,
-        'icontains': "LIKE UPPER(%s) ESCAPE '\\' COLLATE "+ collation,
+        'contains': "LIKE %s ESCAPE '\\'",
+        'icontains': "LIKE UPPER(%s) ESCAPE '\\'",
         'gt': '> %s',
         'gte': '>= %s',
         'lt': '< %s',
         'lte': '<= %s',
-        'startswith': "LIKE %s ESCAPE '\\' COLLATE " + collation,
-        'endswith': "LIKE %s ESCAPE '\\' COLLATE " + collation,
-        'istartswith': "LIKE UPPER(%s) ESCAPE '\\' COLLATE " + collation,
-        'iendswith': "LIKE UPPER(%s) ESCAPE '\\' COLLATE " + collation,
+        'startswith': "LIKE %s ESCAPE '\\'",
+        'endswith': "LIKE %s ESCAPE '\\'",
+        'istartswith': "LIKE UPPER(%s) ESCAPE '\\'",
+        'iendswith': "LIKE UPPER(%s) ESCAPE '\\'",
 
         # TODO: remove, keep native T-SQL LIKE wildcards support
         # or use a "compatibility layer" and replace '*' with '%'
         # and '.' with '_'
-        'regex': 'LIKE %s COLLATE ' + collation,
-        'iregex': 'LIKE %s COLLATE ' + collation,
+        'regex': 'LIKE %s',
+        'iregex': 'LIKE %s',
 
         # TODO: freetext, full-text contains...
     }
@@ -124,10 +92,23 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     def __init__(self, *args, **kwargs):
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
 
-        if 'OPTIONS' in self.settings_dict:
-            self.MARS_Connection = self.settings_dict['OPTIONS'].get('MARS_Connection', False)
-            self.datefirst = self.settings_dict['OPTIONS'].get('datefirst', 7)
-            self.unicode_results = self.settings_dict['OPTIONS'].get('unicode_results', False)
+        options = self.settings_dict.get('OPTIONS', None)
+
+        if options:
+            self.MARS_Connection = options.get('MARS_Connection', False)
+            self.datefirst = options.get('datefirst', 7)
+            self.unicode_results = options.get('unicode_results', False)
+            
+            # make lookup operators to be collation-sensitive if needed
+            self.collation = options.get('collation', None)
+            if self.collation:
+                self.operators = dict(self.__class__.operators)
+                ops = {}
+                for op in self.operators:
+                    sql = self.operators[op]
+                    if sql.startswith('LIKE '):
+                        ops[op] = '%s COLLATE %s' % (sql, self.collation)
+                self.operators.update(ops)
 
         if _DJANGO_VERSION >= 13:
             self.features = DatabaseFeatures(self)
@@ -145,38 +126,24 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         new_conn = False
         settings_dict = self.settings_dict
         db_str, user_str, passwd_str, port_str = None, None, "", None
-        if _DJANGO_VERSION >= 12:
-            options = settings_dict['OPTIONS']
-            if settings_dict['NAME']:
-                db_str = settings_dict['NAME']
-            if settings_dict['HOST']:
-                host_str = settings_dict['HOST']
-            else:
-                host_str = 'localhost'
-            if settings_dict['USER']:
-                user_str = settings_dict['USER']
-            if settings_dict['PASSWORD']:
-                passwd_str = settings_dict['PASSWORD']
-            if settings_dict['PORT']:
-                port_str = settings_dict['PORT']
+
+        options = settings_dict['OPTIONS']
+        if settings_dict['NAME']:
+            db_str = settings_dict['NAME']
+        if settings_dict['HOST']:
+            host_str = settings_dict['HOST']
         else:
-            options = settings_dict['DATABASE_OPTIONS']
-            if settings_dict['DATABASE_NAME']:
-                db_str = settings_dict['DATABASE_NAME']
-            if settings_dict['DATABASE_HOST']:
-                host_str = settings_dict['DATABASE_HOST']
-            else:
-                host_str = 'localhost'
-            if settings_dict['DATABASE_USER']:
-                user_str = settings_dict['DATABASE_USER']
-            if settings_dict['DATABASE_PASSWORD']:
-                passwd_str = settings_dict['DATABASE_PASSWORD']
-            if settings_dict['DATABASE_PORT']:
-                port_str = settings_dict['DATABASE_PORT']
+            host_str = 'localhost'
+        if settings_dict['USER']:
+            user_str = settings_dict['USER']
+        if settings_dict['PASSWORD']:
+            passwd_str = settings_dict['PASSWORD']
+        if settings_dict['PORT']:
+            port_str = settings_dict['PORT']
+
         if self.connection is None:
             new_conn = True
             if not db_str:
-                from django.core.exceptions import ImproperlyConfigured
                 raise ImproperlyConfigured('You need to specify NAME in your Django settings file.')
 
             cstr_parts = []
