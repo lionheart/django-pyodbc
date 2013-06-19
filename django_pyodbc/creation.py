@@ -86,16 +86,25 @@ class DatabaseCreation(BaseDatabaseCreation):
             self.connection.connection.commit()
             return test_name
 
+        if self.connection.ops.on_azure_sql_db:
+            self.connection.close()
+            settings_dict["NAME"] = 'master'
+
         return super(DatabaseCreation, self)._create_test_db(verbosity, autoclobber)
 
     def _destroy_test_db(self, test_database_name, verbosity):
         "Internal implementation - remove the test db tables."
         if self.connection.test_create:
+            if self.connection.ops.on_azure_sql_db:
+                self.connection.close()
+                self.connection.settings_dict["NAME"] = 'master'
+
             cursor = self.connection.cursor()
             self.connection.connection.autocommit = True
             #time.sleep(1) # To avoid "database is being accessed by other users" errors.
-            cursor.execute("ALTER DATABASE %s SET SINGLE_USER WITH ROLLBACK IMMEDIATE " % \
-                    self.connection.ops.quote_name(test_database_name))
+            if not self.connection.ops.on_azure_sql_db:
+                cursor.execute("ALTER DATABASE %s SET SINGLE_USER WITH ROLLBACK IMMEDIATE " % \
+                        self.connection.ops.quote_name(test_database_name))
             cursor.execute("DROP DATABASE %s" % \
                     self.connection.ops.quote_name(test_database_name))
         else:

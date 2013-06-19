@@ -44,6 +44,8 @@ IntegrityError = Database.IntegrityError
 class DatabaseFeatures(BaseDatabaseFeatures):
     can_use_chunked_reads = False
     can_return_id_from_insert = True
+    supports_microsecond_precision = False
+    supports_transactions = True
     #uses_savepoints = True
 
 

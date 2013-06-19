@@ -3,6 +3,8 @@ import datetime
 import time
 import decimal
 
+EDITION_AZURE_SQL_DB = 5
+
 class DatabaseOperations(BaseDatabaseOperations):
     compiler_module = "django_pyodbc.compiler"
     def __init__(self, connection):
@@ -13,6 +15,7 @@ class DatabaseOperations(BaseDatabaseOperations):
 
         self.connection = connection
         self._ss_ver = None
+        self._ss_edition = None
 
     def _get_sql_server_ver(self):
         """
@@ -22,8 +25,11 @@ class DatabaseOperations(BaseDatabaseOperations):
             return self._ss_ver
         cur = self.connection.cursor()
         cur.execute("SELECT CAST(SERVERPROPERTY('ProductVersion') as varchar)")
-        ver_code = int(cur.fetchone()[0].split('.')[0])
-        if ver_code >= 10:
+        ver_code = cur.fetchone()[0]
+        ver_code = int(ver_code.split('.')[0])
+        if ver_code >= 11:
+            self._ss_ver = 2012
+        elif ver_code == 10:
             self._ss_ver = 2008
         elif ver_code == 9:
             self._ss_ver = 2005
@@ -31,6 +37,15 @@ class DatabaseOperations(BaseDatabaseOperations):
             self._ss_ver = 2000
         return self._ss_ver
     sql_server_ver = property(_get_sql_server_ver)
+
+    def _on_azure_sql_db(self):
+        if self._ss_edition is not None:
+            return self._ss_edition == EDITION_AZURE_SQL_DB
+        cur = self.connection.cursor()
+        cur.execute("SELECT CAST(SERVERPROPERTY('EngineEdition') as integer)")
+        self._ss_edition = cur.fetchone()[0]
+        return self._ss_edition == EDITION_AZURE_SQL_DB
+    on_azure_sql_db = property(_on_azure_sql_db)
 
     def date_extract_sql(self, lookup_type, field_name):
         """
@@ -194,16 +209,24 @@ class DatabaseOperations(BaseDatabaseOperations):
                     (self.quote_name(fk[0]), self.quote_name(fk[1])) for fk in fks]
             sql_list.extend(['%s %s %s;' % (style.SQL_KEYWORD('DELETE'), style.SQL_KEYWORD('FROM'),
                              style.SQL_FIELD(self.quote_name(table)) ) for table in tables])
-            # Then reset the counters on each table.
-            sql_list.extend(['%s %s (%s, %s, %s) %s %s;' % (
-                style.SQL_KEYWORD('DBCC'),
-                style.SQL_KEYWORD('CHECKIDENT'),
-                style.SQL_FIELD(self.quote_name(seq["table"])),
-                style.SQL_KEYWORD('RESEED'),
-                style.SQL_FIELD('%d' % seq['start_id']),
-                style.SQL_KEYWORD('WITH'),
-                style.SQL_KEYWORD('NO_INFOMSGS'),
-                ) for seq in seqs])
+
+            if self.on_azure_sql_db:
+                import warnings
+                warnings.warn("The identity columns will never be reset " \
+                              "on Windows Azure SQL Database.",
+                              RuntimeWarning)
+            else:
+                # Then reset the counters on each table.
+                sql_list.extend(['%s %s (%s, %s, %s) %s %s;' % (
+                    style.SQL_KEYWORD('DBCC'),
+                    style.SQL_KEYWORD('CHECKIDENT'),
+                    style.SQL_FIELD(self.quote_name(seq["table"])),
+                    style.SQL_KEYWORD('RESEED'),
+                    style.SQL_FIELD('%d' % seq['start_id']),
+                    style.SQL_KEYWORD('WITH'),
+                    style.SQL_KEYWORD('NO_INFOMSGS'),
+                    ) for seq in seqs])
+
             sql_list.extend(['ALTER TABLE %s CHECK CONSTRAINT %s;' % \
                     (self.quote_name(fk[0]), self.quote_name(fk[1])) for fk in fks])
             return sql_list
