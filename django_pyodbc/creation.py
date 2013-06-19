@@ -50,15 +50,61 @@ class DatabaseCreation(BaseDatabaseCreation):
     #}
     })
 
+    def _create_test_db(self, verbosity, autoclobber):
+        settings_dict = self.connection.settings_dict
+
+        if self.connection._DJANGO_VERSION >= 13:
+            test_name = self._get_test_db_name()
+        else:
+            if settings_dict['TEST_NAME']:
+                test_name = settings_dict['TEST_NAME']
+            else:
+                from django.db.backends.creation import TEST_DATABASE_PREFIX
+                test_name = TEST_DATABASE_PREFIX + settings_dict['NAME']
+        if not settings_dict['TEST_NAME']:
+            settings_dict['TEST_NAME'] = test_name
+
+        if not self.connection.test_create:
+            # use the existing database instead of creating a new one
+            if verbosity >= 1:
+                print("Dropping tables ... ")
+
+            self.connection.close()
+            settings_dict["NAME"] = test_name
+            cursor = self.connection.cursor()
+            qn = self.connection.ops.quote_name
+            sql = "SELECT TABLE_NAME, CONSTRAINT_NAME " \
+                  "FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS " \
+                  "WHERE CONSTRAINT_TYPE = 'FOREIGN KEY'"
+            for row in cursor.execute(sql).fetchall():
+                objs = (qn(row[0]), qn(row[1]))
+                cursor.execute("ALTER TABLE %s DROP CONSTRAINT %s" % objs)
+            for table in self.connection.introspection.get_table_list(cursor):
+                if verbosity >= 1:
+                    print("Dropping table %s" % table)
+                cursor.execute('DROP TABLE %s' % qn(table))
+            self.connection.connection.commit()
+            return test_name
+
+        return super(DatabaseCreation, self)._create_test_db(verbosity, autoclobber)
+
     def _destroy_test_db(self, test_database_name, verbosity):
         "Internal implementation - remove the test db tables."
-        cursor = self.connection.cursor()
-        self.connection.connection.autocommit = True
-        #time.sleep(1) # To avoid "database is being accessed by other users" errors.
-        cursor.execute("ALTER DATABASE %s SET SINGLE_USER WITH ROLLBACK IMMEDIATE " % \
-                self.connection.ops.quote_name(test_database_name))
-        cursor.execute("DROP DATABASE %s" % \
-                self.connection.ops.quote_name(test_database_name))
+        if self.connection.test_create:
+            cursor = self.connection.cursor()
+            self.connection.connection.autocommit = True
+            #time.sleep(1) # To avoid "database is being accessed by other users" errors.
+            cursor.execute("ALTER DATABASE %s SET SINGLE_USER WITH ROLLBACK IMMEDIATE " % \
+                    self.connection.ops.quote_name(test_database_name))
+            cursor.execute("DROP DATABASE %s" % \
+                    self.connection.ops.quote_name(test_database_name))
+        else:
+            if verbosity >= 1:
+                test_db_repr = ''
+                if verbosity >= 2:
+                    test_db_repr = " ('%s')" % test_database_name
+                print("The database is left undestroyed%s." % test_db_repr)
+
         self.connection.close()
 
     def _prepare_for_test_db_ddl(self):

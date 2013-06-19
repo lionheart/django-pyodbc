@@ -110,6 +110,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                         ops[op] = '%s COLLATE %s' % (sql, self.collation)
                 self.operators.update(ops)
 
+        self.test_create = self.settings_dict.get('TEST_CREATE', True)
+
         if _DJANGO_VERSION >= 13:
             self.features = DatabaseFeatures(self)
         else:
