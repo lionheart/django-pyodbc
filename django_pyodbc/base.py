@@ -48,6 +48,9 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     supports_transactions = True
     #uses_savepoints = True
 
+    def _supports_transactions(self):
+        # keep it compatible with Django 1.3 and 1.4
+        return self.supports_transactions
 
 class DatabaseWrapper(BaseDatabaseWrapper):
     _DJANGO_VERSION = _DJANGO_VERSION

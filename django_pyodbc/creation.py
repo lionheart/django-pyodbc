@@ -120,6 +120,10 @@ class DatabaseCreation(BaseDatabaseCreation):
         self.connection.connection.rollback()
         self.connection.connection.autocommit = True
 
+    def _rollback_works(self):
+        # keep it compatible with Django 1.2
+        return self.connection.features.supports_transactions
+
     def sql_table_creation_suffix(self):
         suffix = []
         if self.connection.settings_dict['TEST_COLLATION']:
