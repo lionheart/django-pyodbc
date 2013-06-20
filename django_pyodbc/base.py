@@ -242,6 +242,27 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
         return CursorWrapper(cursor, self.driver_needs_utf8)
 
+    def _execute_foreach(self, sql, table_names=None):
+        cursor = self.cursor()
+        if not table_names:
+            table_names = self.introspection.get_table_list(cursor)
+        for table_name in table_names:
+            cursor.execute(sql % self.ops.quote_name(table_name))
+
+    def check_constraints(self, table_names=None):
+        self._execute_foreach('ALTER TABLE %s WITH CHECK CHECK CONSTRAINT ALL', table_names)
+
+    def disable_constraint_checking(self):
+        # Windows Azure SQL Database doesn't support sp_msforeachtable
+        #cursor.execute('EXEC sp_msforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT ALL"')
+        self._execute_foreach('ALTER TABLE %s NOCHECK CONSTRAINT ALL')
+        return True
+
+    def enable_constraint_checking(self):
+        # Windows Azure SQL Database doesn't support sp_msforeachtable
+        #cursor.execute('EXEC sp_msforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL"')
+        self.check_constraints()
+
 
 class CursorWrapper(object):
     """
