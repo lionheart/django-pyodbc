@@ -129,6 +129,9 @@ class DatabaseOperations(BaseDatabaseOperations):
             return "UPPER(%s)"
         return "%s"
 
+    def max_name_length(self):
+        return 128
+
     def quote_name(self, name):
         """
         Returns a quoted version of the given table, index or column name. Does
