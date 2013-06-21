@@ -3,6 +3,7 @@ MS SQL Server database backend for Django.
 """
 import os
 import re
+import sys
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -18,6 +19,7 @@ pyodbc_ver = tuple(map(int, vlist))
 if pyodbc_ver < (2, 0, 38, 9999):
     raise ImproperlyConfigured("pyodbc 2.0.38 or newer is required; you have %s" % Database.version)
 
+from django.db import utils
 from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDatabaseValidation
 from django.db.backends.signals import connection_created
 from django.conf import settings
@@ -38,7 +40,7 @@ from django_pyodbc.client import DatabaseClient
 from django_pyodbc.creation import DatabaseCreation
 from django_pyodbc.introspection import DatabaseIntrospection
 
-DatabaseError = Database.DatabaseError
+DatabaseError = Database.Error
 IntegrityError = Database.IntegrityError
 
 class DatabaseFeatures(BaseDatabaseFeatures):
@@ -318,7 +320,15 @@ class CursorWrapper(object):
         sql = self.format_sql(sql, len(params))
         params = self.format_params(params)
         self.last_params = params
-        return self.cursor.execute(sql, params)
+
+        try:
+            return self.cursor.execute(sql, params)
+        except IntegrityError:
+            e = sys.exc_info()[1]
+            raise utils.IntegrityError(*e.args)
+        except DatabaseError:
+            e = sys.exc_info()[1]
+            raise utils.DatabaseError(*e.args)
 
     def executemany(self, sql, params_list):
         sql = self.format_sql(sql)
@@ -329,7 +339,15 @@ class CursorWrapper(object):
         else:
             raw_pll = params_list
             params_list = [self.format_params(p) for p in raw_pll]
-        return self.cursor.executemany(sql, params_list)
+
+        try:
+            return self.cursor.executemany(sql, params_list)
+        except IntegrityError:
+            e = sys.exc_info()[1]
+            raise utils.IntegrityError(*e.args)
+        except DatabaseError:
+            e = sys.exc_info()[1]
+            raise utils.DatabaseError(*e.args)
 
     def format_results(self, rows):
         """
