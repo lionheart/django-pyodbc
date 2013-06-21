@@ -47,6 +47,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     can_use_chunked_reads = False
     can_return_id_from_insert = True
     supports_microsecond_precision = False
+    supports_subqueries_in_group_by = False
     supports_transactions = True
     #uses_savepoints = True
 
