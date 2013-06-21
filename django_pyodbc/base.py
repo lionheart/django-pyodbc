@@ -210,7 +210,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             else:
                 self.connection = Database.connect(connstr, \
                         autocommit=autocommit)
-            connection_created.send(sender=self.__class__)
+            connection_created.send(sender=self.__class__, connection=self)
 
         cursor = self.connection.cursor()
         if new_conn:
