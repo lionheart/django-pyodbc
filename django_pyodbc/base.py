@@ -1,6 +1,7 @@
 """
 MS SQL Server database backend for Django.
 """
+import datetime
 import os
 import re
 import sys
@@ -37,6 +38,7 @@ else:
 
 from django_pyodbc.operations import DatabaseOperations
 from django_pyodbc.client import DatabaseClient
+from django_pyodbc.compat import timezone
 from django_pyodbc.creation import DatabaseCreation
 from django_pyodbc.introspection import DatabaseIntrospection
 
@@ -355,16 +357,18 @@ class CursorWrapper(object):
         Decode data coming from the database if needed and convert rows to tuples
         (pyodbc Rows are not sliceable).
         """
-        if not self.driver_needs_utf8:
+        needs_utc = _DJANGO_VERSION >= 14 and settings.USE_TZ
+        if not (needs_utc or self.driver_needs_utf8):
             return tuple(rows)
         # FreeTDS (and other ODBC drivers?) don't support Unicode yet, so we
         # need to decode UTF-8 data coming from the DB
         fr = []
         for row in rows:
-            if isinstance(row, str):
-                fr.append(row.decode('utf-8'))
-            else:
-                fr.append(row)
+            if self.driver_needs_utf8 and isinstance(row, str):
+                row = row.decode('utf-8')
+            elif needs_utc and isinstance(row, datetime.datetime):
+                row = row.replace(tzinfo=timezone.utc)
+            fr.append(row)
         return tuple(fr)
 
     def fetchone(self):

@@ -1,7 +1,11 @@
-from django.db.backends import BaseDatabaseOperations
 import datetime
-import time
 import decimal
+import time
+
+from django.conf import settings
+from django.db.backends import BaseDatabaseOperations
+
+from django_pyodbc.compat import timezone
 
 EDITION_AZURE_SQL_DB = 5
 
@@ -288,8 +292,13 @@ class DatabaseOperations(BaseDatabaseOperations):
         """
         if value is None:
             return None
-        # SQL Server doesn't support microseconds
-        return value.replace(microsecond=0)
+        if self.connection._DJANGO_VERSION >= 14 and settings.USE_TZ:
+            if timezone.is_aware(value):
+                # pyodbc donesn't support datetimeoffset
+                value = value.astimezone(timezone.utc)
+        if not self.connection.features.supports_microsecond_precision:
+            value = value.replace(microsecond=0)
+        return value
 
     def value_to_db_time(self, value):
         """
