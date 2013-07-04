@@ -5,7 +5,7 @@ import time
 from django.conf import settings
 from django.db.backends import BaseDatabaseOperations
 
-from django_pyodbc.compat import timezone
+from django_pyodbc.compat import smart_text, string_types, timezone
 
 EDITION_AZURE_SQL_DB = 5
 
@@ -274,9 +274,8 @@ class DatabaseOperations(BaseDatabaseOperations):
 
     def prep_for_like_query(self, x):
         """Prepares a value for use in a LIKE query."""
-        from django.utils.encoding import smart_unicode
         # http://msdn2.microsoft.com/en-us/library/ms179859.aspx
-        return smart_unicode(x).replace('\\', '\\\\').replace('[', '[[]').replace('%', '[%]').replace('_', '[_]')
+        return smart_text(x).replace('\\', '\\\\').replace('[', '[[]').replace('%', '[%]').replace('_', '[_]')
 
     def prep_for_iexact_query(self, x):
         """
@@ -308,7 +307,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         if value is None:
             return None
         # SQL Server doesn't support microseconds
-        if isinstance(value, basestring):
+        if isinstance(value, string_types):
             return datetime.datetime(*(time.strptime(value, '%H:%M:%S')[:6]))
         return datetime.datetime(1900, 1, 1, value.hour, value.minute, value.second)
 
@@ -333,9 +332,9 @@ class DatabaseOperations(BaseDatabaseOperations):
         if isinstance(value, decimal.Decimal):
             context = decimal.getcontext().copy()
             context.prec = max_digits
-            return u"%.*f" % (decimal_places, value.quantize(decimal.Decimal(".1") ** decimal_places, context=context))
+            return "%.*f" % (decimal_places, value.quantize(decimal.Decimal(".1") ** decimal_places, context=context))
         else:
-            return u"%.*f" % (decimal_places, value)
+            return "%.*f" % (decimal_places, value)
 
     def convert_values(self, value, field):
         """

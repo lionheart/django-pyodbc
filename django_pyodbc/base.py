@@ -10,7 +10,8 @@ from django.core.exceptions import ImproperlyConfigured
 
 try:
     import pyodbc as Database
-except ImportError, e:
+except ImportError:
+    e = sys.exc_info()[1]
     raise ImproperlyConfigured("Error loading pyodbc module: %s" % e)
 
 m = re.match(r'(\d+)\.(\d+)\.(\d+)(?:-beta(\d+))?', Database.version)
@@ -38,7 +39,7 @@ else:
 
 from django_pyodbc.operations import DatabaseOperations
 from django_pyodbc.client import DatabaseClient
-from django_pyodbc.compat import timezone
+from django_pyodbc.compat import binary_type, text_type, timezone
 from django_pyodbc.creation import DatabaseCreation
 from django_pyodbc.introspection import DatabaseIntrospection
 
@@ -282,7 +283,7 @@ class CursorWrapper(object):
         self.last_params = ()
 
     def format_sql(self, sql, n_params=None):
-        if self.driver_needs_utf8 and isinstance(sql, unicode):
+        if self.driver_needs_utf8 and isinstance(sql, text_type):
             # FreeTDS (and other ODBC drivers?) don't support Unicode yet, so
             # we need to encode the SQL clause itself in utf-8
             sql = sql.encode('utf-8')
@@ -297,14 +298,14 @@ class CursorWrapper(object):
     def format_params(self, params):
         fp = []
         for p in params:
-            if isinstance(p, unicode):
+            if isinstance(p, text_type):
                 if self.driver_needs_utf8:
                     # FreeTDS (and other ODBC drivers?) doesn't support Unicode
                     # yet, so we need to encode parameters in utf-8
                     fp.append(p.encode('utf-8'))
                 else:
                     fp.append(p)
-            elif isinstance(p, str):
+            elif isinstance(p, binary_type):
                 if self.driver_needs_utf8:
                     # TODO: use system encoding when calling decode()?
                     fp.append(p.decode('utf-8').encode('utf-8'))

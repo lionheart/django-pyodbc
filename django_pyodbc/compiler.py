@@ -1,6 +1,8 @@
 from django.db.models.sql import compiler
 from datetime import datetime
 
+from django_pyodbc.compat import zip_longest
+
 REV_ODIR = {
     'ASC': 'DESC',
     'DESC': 'ASC'
@@ -35,9 +37,9 @@ USE_TOP_LMARK = 2 # For SQL Server 2000 when offset but no limit is provided
 class SQLCompiler(compiler.SQLCompiler):
 
     def resolve_columns(self, row, fields=()):
-        index_start = len(self.query.extra_select.keys())
+        index_start = len(list(self.query.extra_select.keys()))
         values = [self.query.convert_values(v, None, connection=self.connection) for v in row[:index_start]]
-        for value, field in map(None, row[index_start:], fields):
+        for value, field in zip_longest(row[index_start:], fields):
             values.append(self.query.convert_values(value, field, connection=self.connection))
         return tuple(values)
 
@@ -140,7 +142,7 @@ class SQLCompiler(compiler.SQLCompiler):
         where, w_params = self.query.where.as_sql(qn, self.connection)
         having, h_params = self.query.having.as_sql(qn, self.connection)
         params = []
-        for val in self.query.extra_select.itervalues():
+        for val in self.query.extra_select.values():
             params.extend(val[1])
 
         result = ['SELECT']
