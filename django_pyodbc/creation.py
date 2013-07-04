@@ -1,7 +1,7 @@
 import base64
 import random
 
-from django.db.backends.creation import BaseDatabaseCreation, TEST_DATABASE_PREFIX
+from django.db.backends.creation import BaseDatabaseCreation
 
 from django_pyodbc.compat import b, md5_constructor
 
