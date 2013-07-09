@@ -366,7 +366,7 @@ class CursorWrapper(object):
         # need to decode UTF-8 data coming from the DB
         fr = []
         for row in rows:
-            if self.driver_needs_utf8 and isinstance(row, str):
+            if self.driver_needs_utf8 and isinstance(row, binary_type):
                 row = row.decode('utf-8')
             elif needs_utc and isinstance(row, datetime.datetime):
                 row = row.replace(tzinfo=timezone.utc)
