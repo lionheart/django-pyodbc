@@ -308,7 +308,7 @@ class CursorWrapper(object):
             elif isinstance(p, binary_type):
                 if self.driver_needs_utf8:
                     # TODO: use system encoding when calling decode()?
-                    fp.append(p.decode('utf-8').encode('utf-8'))
+                    fp.append(p.decode('latin1').encode('utf-8'))
                 else:
                     fp.append(p)
             elif isinstance(p, type(True)):
@@ -367,7 +367,7 @@ class CursorWrapper(object):
         fr = []
         for row in rows:
             if self.driver_needs_utf8 and isinstance(row, binary_type):
-                row = row.decode('utf-8')
+                row = row.decode('latin1')
             elif needs_utc and isinstance(row, datetime.datetime):
                 row = row.replace(tzinfo=timezone.utc)
             fr.append(row)
