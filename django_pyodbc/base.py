@@ -308,7 +308,6 @@ class CursorWrapper(object):
             elif isinstance(p, binary_type):
                 if self.driver_needs_utf8:
                     # TODO: use system encoding when calling decode()?
-                    from django.conf import settings
                     encoding = getattr(settings, 'MSSQL_DECODER', 'utf-8')
                     fp.append(p.decode(encoding).encode('utf-8'))
                 else:
@@ -369,7 +368,9 @@ class CursorWrapper(object):
         fr = []
         for row in rows:
             if self.driver_needs_utf8 and isinstance(row, binary_type):
-                row = row.decode('latin1')
+                encoding = getattr(settings, 'MSSQL_DECODER', 'utf-8')
+                row = row.decode(encoding)
+
             elif needs_utc and isinstance(row, datetime.datetime):
                 row = row.replace(tzinfo=timezone.utc)
             fr.append(row)
