@@ -308,7 +308,9 @@ class CursorWrapper(object):
             elif isinstance(p, binary_type):
                 if self.driver_needs_utf8:
                     # TODO: use system encoding when calling decode()?
-                    fp.append(p.decode('latin1').encode('utf-8'))
+                    from django.conf import settings
+                    encoding = getattr(settings, 'MSSQL_DECODER', 'utf-8')
+                    fp.append(p.decode(encoding).encode('utf-8'))
                 else:
                     fp.append(p)
             elif isinstance(p, type(True)):
