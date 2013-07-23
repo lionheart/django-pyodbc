@@ -110,6 +110,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             self.MARS_Connection = options.get('MARS_Connection', False)
             self.datefirst = options.get('datefirst', 7)
             self.unicode_results = options.get('unicode_results', False)
+            self.encoding = options.get('encoding', 'utf-8')
             
             # make lookup operators to be collation-sensitive if needed
             self.collation = options.get('collation', None)
@@ -247,7 +248,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             if self.drv_name.startswith('LIBTDSODBC') and not self.connection.autocommit:
                 self.connection.commit()
 
-        return CursorWrapper(cursor, self.driver_needs_utf8)
+        return CursorWrapper(cursor, self.driver_needs_utf8, self.encoding)
 
     def _execute_foreach(self, sql, table_names=None):
         cursor = self.cursor()
@@ -276,11 +277,12 @@ class CursorWrapper(object):
     A wrapper around the pyodbc's cursor that takes in account a) some pyodbc
     DB-API 2.0 implementation and b) some common ODBC driver particularities.
     """
-    def __init__(self, cursor, driver_needs_utf8):
+    def __init__(self, cursor, driver_needs_utf8, encoding=""):
         self.cursor = cursor
         self.driver_needs_utf8 = driver_needs_utf8
         self.last_sql = ''
         self.last_params = ()
+        self.encoding = encoding
 
     def format_sql(self, sql, n_params=None):
         if self.driver_needs_utf8 and isinstance(sql, text_type):
@@ -307,9 +309,7 @@ class CursorWrapper(object):
                     fp.append(p)
             elif isinstance(p, binary_type):
                 if self.driver_needs_utf8:
-                    # TODO: use system encoding when calling decode()?
-                    encoding = getattr(settings, 'MSSQL_DECODER', 'utf-8')
-                    fp.append(p.decode(encoding).encode('utf-8'))
+                    fp.append(p.decode(self.encoding).encode('utf-8'))
                 else:
                     fp.append(p)
             elif isinstance(p, type(True)):
@@ -368,8 +368,7 @@ class CursorWrapper(object):
         fr = []
         for row in rows:
             if self.driver_needs_utf8 and isinstance(row, binary_type):
-                encoding = getattr(settings, 'MSSQL_DECODER', 'utf-8')
-                row = row.decode(encoding)
+                row = row.decode(self.encoding)
 
             elif needs_utc and isinstance(row, datetime.datetime):
                 row = row.replace(tzinfo=timezone.utc)
