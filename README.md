@@ -104,6 +104,10 @@ The following settings control the behavior of the backend:
         ``"Chinese_PRC_CI_AS"``. The default collation for the database
         will be used if no value is specified.
 
+	``encoding``
+		String. Encoding used to decode data from this database. Default is 'utf-8'.
+
+
 License
 -------
 
