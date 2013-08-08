@@ -70,8 +70,12 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
 
         # map pyodbc's cursor.columns to db-api cursor description
         columns = [[c[3], c[4], None, c[6], c[6], c[8], c[10]] for c in cursor.columns(table=table_name)]
+
         items = []
         for column in columns:
+            # db-api requires unicode at column name [msbrogli 2013-08-07]
+            column[0] = column[0].decode(cursor.encoding)
+
             if identity_check and self._is_auto_field(cursor, table_name, column[0]):
                 column[1] = SQL_AUTOFIELD
             if column[1] == Database.SQL_WVARCHAR and column[3] < 4000:
