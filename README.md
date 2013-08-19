@@ -104,8 +104,17 @@ The following settings control the behavior of the backend:
         ``"Chinese_PRC_CI_AS"``. The default collation for the database
         will be used if no value is specified.
 
-	``encoding``
-		String. Encoding used to decode data from this database. Default is 'utf-8'.
+    ``encoding``
+        String. Encoding used to decode data from this database. Default is 'utf-8'.
+		
+    ``driver_needs_utf8``
+        Boolean. Some drivers (FreeTDS, and other ODBC drivers?) don't support
+        Unicode yet, so SQL clauses' encoding is forced to utf-8 for those
+        cases.
+		
+        If this option is not present, the value is guessed according to the
+        driver set.
+	
 
 
 License
