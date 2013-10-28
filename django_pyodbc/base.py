@@ -171,9 +171,9 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                     driver = 'FreeTDS'
 
             if driver == 'FreeTDS' or driver.endswith('/libtdsodbc.so'):
-                driverIsFreeTDS = True
+                driver_is_freetds = True
             else:
-                driverIsFreeTDS = False
+                driver_is_freetds = False
 
             # Microsoft driver names assumed here are:
             # * SQL Server
@@ -186,12 +186,12 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 cstr_parts.append('DSN=%s' % options['dsn'])
             else:
                 # Only append DRIVER if DATABASE_ODBC_DSN hasn't been set
-                if '/' in driver:
+                if os.path.isabs(driver):
                     cstr_parts.append('DRIVER=%s' % driver)
                 else:
                     cstr_parts.append('DRIVER={%s}' % driver)
 
-                if ms_drivers.match(driver) or driverIsFreeTDS and \
+                if ms_drivers.match(driver) or driver_is_freetds and \
                         options.get('host_is_server', False):
                     if port_str:
                         host_str += ';PORT=%s' % port_str
