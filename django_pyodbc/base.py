@@ -111,6 +111,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             self.datefirst = options.get('datefirst', 7)
             self.unicode_results = options.get('unicode_results', False)
             self.encoding = options.get('encoding', 'utf-8')
+            self.driver_needs_utf8 = options.get('driver_needs_utf8', None)
             
             # make lookup operators to be collation-sensitive if needed
             self.collation = options.get('collation', None)
