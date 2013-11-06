@@ -269,8 +269,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                         self.driver_supports_utf8 = LooseVersion(freetds_version) >= LooseVersion('0.91')
 
             elif self.driver_supports_utf8 is None:
-                    self.driver_supports_utf8 = (self.drv_name == 'SQLSRV32.DLL'
-                                                 or ms_sqlncli.match(self.drv_name)
+                self.driver_supports_utf8 = (self.drv_name == 'SQLSRV32.DLL'
+                                             or ms_sqlncli.match(self.drv_name))
 
         return CursorWrapper(cursor, self.driver_supports_utf8, self.encoding)
 
