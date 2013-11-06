@@ -5,6 +5,7 @@ import datetime
 import os
 import re
 import sys
+import warnings
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -256,25 +257,20 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
                 freetds_version = self.connection.getinfo(Database.SQL_DRIVER_VER)
                 if self.driver_supports_utf8 is None:
-                    import warnings
                     try:
                         from distutils.version import LooseVersion
                     except ImportError:
                         warnings.warn(Warning('Using naive FreeTDS version detection. Install distutils to get better version detection.'))
-                        self.driver_supports_utf8 = True
-                        if freetds_version.startswith('0.82'):
-                            self.driver_supports_utf8 = False
+                        self.driver_supports_utf8 = not freetds_version.startswith('0.82')
                     else:
                         # This is the minimum version that properly supports
                         # Unicode. Though it started in version 0.82, the
                         # implementation in that version was buggy.
                         self.driver_supports_utf8 = LooseVersion(freetds_version) >= LooseVersion('0.91')
-            else:
-                if self.driver_supports_utf8 is None:
-                    self.driver_supports_utf8 = False
-                    if self.drv_name == 'SQLSRV32.DLL' or ms_sqlncli.match(self.drv_name):
-                        self.driver_supports_utf8 = True
 
+            elif self.driver_supports_utf8 is None:
+                    self.driver_supports_utf8 = (self.drv_name == 'SQLSRV32.DLL'
+                                                 or ms_sqlncli.match(self.drv_name)
 
         return CursorWrapper(cursor, self.driver_supports_utf8, self.encoding)
 
