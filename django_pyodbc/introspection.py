@@ -9,7 +9,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         SQL_AUTOFIELD:                  'AutoField',
         Database.SQL_BIGINT:            'BigIntegerField',
         #Database.SQL_BINARY:            ,
-        Database.SQL_BIT:               'BooleanField',
+        Database.SQL_BIT:               'NullBooleanField',
         Database.SQL_CHAR:              'CharField',
         Database.SQL_DECIMAL:           'DecimalField',
         Database.SQL_DOUBLE:            'FloatField',
