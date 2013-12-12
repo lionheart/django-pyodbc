@@ -94,15 +94,15 @@ WHERE
 
         cursor.execute(sql, [table_name])
 
-        # columns = [FieldInfo(
-        #             force_text(line[0]),    # db_column name
-        #             line[1],                # column type_code
-        #             line[2],                # display_size  (max_length in MSese)
-        #             line[3],                # internal_size
-        #             line[4],                # numeric precision
-        #             line[5],                # numeric scale
-        #             line[6])                # null_ok
-        #         for line in cursor.fetchall()]
+        columns = [FieldInfo(
+                    force_text(line[0]),    # db_column name
+                    line[1],                # column type_code
+                    line[2],                # display_size  (max_length in MSese)
+                    None, #line[3],                # internal_size
+                    line[4],                # numeric precision
+                    line[5],                # numeric scale
+                    line[6])                # null_ok
+                for line in cursor.fetchall()]
         columns = cursor.fetchall()
 
         items = []
