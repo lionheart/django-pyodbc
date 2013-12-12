@@ -1,12 +1,8 @@
 from django.db.backends import BaseDatabaseIntrospection
-from django.utils.encoding import force_text
 import pyodbc as Database
-from collections import namedtuple
-
 
 SQL_AUTOFIELD = -777555
-FieldInfo = namedtuple('FieldInfo','name type_code display_size internal_size precision scale null_ok')
-        
+
 class DatabaseIntrospection(BaseDatabaseIntrospection):
     # Map type codes to Django Field types.
     data_types_reverse = {
@@ -72,51 +68,15 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         of SQL_AUTOFIELD, which maps to the 'AutoField' value in the DATA_TYPES_REVERSE dict.
         """
 
-        sql = """
-SELECT 
-    c.name 'Column Name',
-    t.Name 'Data type',
-    c.max_length 'Max Length',
-    c.precision ,
-    c.scale ,
-    c.is_nullable,
-    ISNULL(i.is_primary_key, 0) 'Primary Key'
-FROM    
-    sys.columns c
-INNER JOIN 
-    sys.types t ON c.system_type_id = t.system_type_id
-LEFT OUTER JOIN 
-    sys.index_columns ic ON ic.object_id = c.object_id AND ic.column_id = c.column_id
-LEFT OUTER JOIN 
-    sys.indexes i ON ic.object_id = i.object_id AND ic.index_id = i.index_id
-WHERE
-    c.object_id = OBJECT_ID(%s)"""
-
-        cursor.execute(sql, [table_name])
-
-        # columns = [FieldInfo(
-        #             force_text(line[0]),    # db_column name
-        #             line[1],                # column type_code
-        #             line[2],                # display_size  (max_length in MSese)
-        #             line[3],                # internal_size
-        #             line[4],                # numeric precision
-        #             line[5],                # numeric scale
-        #             line[6])                # null_ok
-        #         for line in cursor.fetchall()]
-        columns = cursor.fetchall()
-
+        # map pyodbc's cursor.columns to db-api cursor description
+        columns = [[c[3], c[4], None, c[6], c[6], c[8], c[10]] for c in cursor.columns(table=table_name)]
         items = []
         for column in columns:
             if identity_check and self._is_auto_field(cursor, table_name, column[0]):
-                print 'AUTOFIELD'
-                column.type = SQL_AUTOFIELD
-            # Conversion from TextField to CharField is unwise:
-            #   A SQLServer db field of type "Text" cannot be used like as a CharField, no matter how short it is.
-            #   For example, model.objects.values(<text_field_name>).count() will fail on a sqlserver 'text' field
+                column[1] = SQL_AUTOFIELD
             if column[1] == Database.SQL_WVARCHAR and column[3] < 4000:
                 column[1] = Database.SQL_WCHAR
             items.append(column)
-
         return items
 
     def _name_to_index(self, cursor, table_name):
