@@ -9,7 +9,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         SQL_AUTOFIELD:                  'AutoField',
         Database.SQL_BIGINT:            'BigIntegerField',
         #Database.SQL_BINARY:            ,
-        Database.SQL_BIT:               'BooleanField',
+        Database.SQL_BIT:               'NullBooleanField',
         Database.SQL_CHAR:              'CharField',
         Database.SQL_DECIMAL:           'DecimalField',
         Database.SQL_DOUBLE:            'FloatField',
@@ -74,6 +74,9 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         for column in columns:
             if identity_check and self._is_auto_field(cursor, table_name, column[0]):
                 column[1] = SQL_AUTOFIELD
+            # The conversion from TextField to CharField below is unwise.
+            #   A SQLServer db field of type "Text" is not interchangeable with a CharField, no matter how short its max_length.
+            #   For example, model.objects.values(<text_field_name>).count() will fail on a sqlserver 'text' field
             if column[1] == Database.SQL_WVARCHAR and column[3] < 4000:
                 column[1] = Database.SQL_WCHAR
             items.append(column)
