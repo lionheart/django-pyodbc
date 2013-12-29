@@ -208,14 +208,12 @@ class DatabaseOperations(BaseDatabaseOperations):
        "uses_savepoints" feature is True. The "sid" parameter is a string
        for the savepoint id.
        """
-       print "SAVE POINR!@#!#!@"
        return "SAVE TRANSACTION %s" % sid
 
     def savepoint_commit_sql(self, sid):
        """
        Returns the SQL for committing the given savepoint.
        """
-       print "SAVE POINR"
        return "COMMIT TRANSACTION %s" % sid
 
     def savepoint_rollback_sql(self, sid):

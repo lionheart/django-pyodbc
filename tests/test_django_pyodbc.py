@@ -20,7 +20,6 @@ DATABASES = {
        'USER': "sa",
        'PASSWORD': "1Password",
        'NAME': "defaultdb",
-       'TEST_NAME': "ddb2",
        'OPTIONS': {
            'host_is_server': True,
            'autocommit': True,
@@ -33,7 +32,6 @@ DATABASES = {
        'USER': "sa",
        'PASSWORD': "1Password",
        'NAME': "otherdb",
-       'TEST_NAME': "odb2",
        'OPTIONS': {
            'host_is_server': True,
            'autocommit': True,

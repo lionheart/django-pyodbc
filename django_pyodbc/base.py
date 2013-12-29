@@ -370,8 +370,8 @@ class CursorWrapper(object):
             try:
                 sql = sql % tuple('?' * n_params)
             except:
-                print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-                print n_params
+                #Todo checkout whats happening here
+                pass
         else:
             if '%s' in sql:
                 sql = sql.replace('%s', '?')
@@ -406,7 +406,6 @@ class CursorWrapper(object):
         sql = self.format_sql(sql, len(params))
         params = self.format_params(params)
         self.last_params = params
-        #print sql
         try:
             return self.cursor.execute(sql, params)
         except IntegrityError:
@@ -480,7 +479,6 @@ class CursorWrapper(object):
     # # implicitly committed with the transaction.
     # # Ignore them.
     def savepoint_commit(self, sid):
-        print '!!!!!!!!!!!!!!!!!!!!!aaa!!!!!!!!!!!!!'
         # if something is populating self.queries, include a fake entry to avoid
         # issues with tests that use assertNumQueries.
         if self.queries:

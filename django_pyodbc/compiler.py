@@ -321,8 +321,6 @@ class SQLCompiler(compiler.SQLCompiler):
 
         # Lop off ORDER... and the initial "SELECT"
         inner_select = _remove_order_limit_offset(raw_sql)
-        print raw_sql
-        print inner_select
         outer_fields, inner_select = self._alias_columns(inner_select)
 
         order = _get_order_limit_offset(raw_sql)[0]
