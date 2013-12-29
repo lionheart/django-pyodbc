@@ -57,6 +57,8 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
                          (self.connection.ops.quote_name(table_name), column_name))
         return cursor.fetchall()[0][0]
 
+
+
     def get_table_description(self, cursor, table_name, identity_check=True):
         """Returns a description of the table, with DB-API cursor.description interface.
 
@@ -183,3 +185,44 @@ AND t.name = %s"""
     #
     #    cursor.execute("SELECT name, description FROM ::fn_helpcollations()")
     #    return [tuple(row) for row in cursor.fetchall()]
+
+    def get_key_columns(self, cursor, table_name):
+        """
+        Backends can override this to return a list of (column_name, referenced_table_name,
+        referenced_column_name) for all key columns in given table.
+        """
+        source_field_dict = self._name_to_index(cursor, table_name)
+
+        sql = """
+select
+    COLUMN_NAME = fk_cols.COLUMN_NAME,
+    REFERENCED_TABLE_NAME = pk.TABLE_NAME,
+    REFERENCED_COLUMN_NAME = pk_cols.COLUMN_NAME
+from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ref_const
+join INFORMATION_SCHEMA.TABLE_CONSTRAINTS fk
+    on ref_const.CONSTRAINT_CATALOG = fk.CONSTRAINT_CATALOG
+    and ref_const.CONSTRAINT_SCHEMA = fk.CONSTRAINT_SCHEMA
+    and ref_const.CONSTRAINT_NAME = fk.CONSTRAINT_NAME
+    and fk.CONSTRAINT_TYPE = 'FOREIGN KEY'
+
+join INFORMATION_SCHEMA.TABLE_CONSTRAINTS pk
+    on ref_const.UNIQUE_CONSTRAINT_CATALOG = pk.CONSTRAINT_CATALOG
+    and ref_const.UNIQUE_CONSTRAINT_SCHEMA = pk.CONSTRAINT_SCHEMA
+    and ref_const.UNIQUE_CONSTRAINT_NAME = pk.CONSTRAINT_NAME
+    And pk.CONSTRAINT_TYPE = 'PRIMARY KEY'
+
+join INFORMATION_SCHEMA.KEY_COLUMN_USAGE fk_cols
+    on ref_const.CONSTRAINT_NAME = fk_cols.CONSTRAINT_NAME
+
+join INFORMATION_SCHEMA.KEY_COLUMN_USAGE pk_cols
+    on pk.CONSTRAINT_NAME = pk_cols.CONSTRAINT_NAME
+where
+    fk.TABLE_NAME = %s"""
+
+        cursor.execute(sql,[table_name])
+        relations = cursor.fetchall()
+
+        key_columns = []
+        key_columns.extend([(source_column, target_table, target_column) \
+            for source_column, target_table, target_column in relations])
+        return key_columns
