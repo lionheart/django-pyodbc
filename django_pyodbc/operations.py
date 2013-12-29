@@ -61,20 +61,59 @@ class DatabaseOperations(BaseDatabaseOperations):
         else:
             return "DATEPART(%s, %s)" % (lookup_type, field_name)
 
-    def date_trunc_sql(self, lookup_type, field_name):
-        """
-        Given a lookup_type of 'year', 'month' or 'day', returns the SQL that
-        truncates the given date field field_name to a DATE object with only
-        the given specificity.
-        """
-        if lookup_type == 'year':
-            return "Convert(datetime, Convert(varchar, DATEPART(year, %s)) + '/01/01')" % field_name
-        if lookup_type == 'month':
-            return "Convert(datetime, Convert(varchar, DATEPART(year, %s)) + '/' + Convert(varchar, DATEPART(month, %s)) + '/01')" % (field_name, field_name)
-        if lookup_type == 'day':
-            return "Convert(datetime, Convert(varchar(12), %s, 112))" % field_name
 
-    def field_cast_sql(self, db_type):
+    def date_trunc_sql(self, lookup_type, field_name):
+        return "DATEADD(%s, DATEDIFF(%s, 0, %s), 0)" % (lookup_type, lookup_type, field_name)
+        
+    def _switch_tz_offset_sql(self, field_name, tzname):
+        """
+        Returns the SQL that will convert field_name to UTC from tzname.
+        """
+        field_name = self.quote_name(field_name)
+        if settings.USE_TZ:
+            if pytz is None:
+                from django.core.exceptions import ImproperlyConfigured
+                raise ImproperlyConfigured("This query requires pytz, "
+                                           "but it isn't installed.")
+            tz = pytz.timezone(tzname)
+            td = tz.utcoffset(datetime.datetime(2000, 1, 1))
+
+            def total_seconds(td):
+                if hasattr(td, 'total_seconds'):
+                    return td.total_seconds()
+                else:
+                    return td.days * 24 * 60 * 60 + td.seconds
+
+            total_minutes = total_seconds(td) // 60
+            hours, minutes = divmod(total_minutes, 60)
+            tzoffset = "%+03d:%02d" % (hours, minutes)
+            field_name = "CAST(SWITCHOFFSET(TODATETIMEOFFSET(%s, '+00:00'), '%s') AS DATETIME2)" % (field_name, tzoffset)
+        return field_name
+
+    def datetime_trunc_sql(self, lookup_type, field_name, tzname):
+        """
+        Given a lookup_type of 'year', 'month', 'day', 'hour', 'minute' or
+        'second', returns the SQL that truncates the given datetime field
+        field_name to a datetime object with only the given specificity, and
+        a tuple of parameters.
+        """
+        field_name = self._switch_tz_offset_sql(field_name, tzname)
+        reference_date = '0' # 1900-01-01
+        if lookup_type in ['minute', 'second']:
+            # Prevent DATEDIFF overflow by using the first day of the year as
+            # the reference point. Only using for minute and second to avoid any
+            # potential performance hit for queries against very large datasets.
+            reference_date = "CONVERT(datetime2, CONVERT(char(4), {field_name}, 112) + '0101', 112)".format(
+                field_name=field_name,
+            )
+        sql = "DATEADD({lookup}, DATEDIFF({lookup}, {reference_date}, {field_name}), {reference_date})".format(
+            lookup=lookup_type,
+            field_name=field_name,
+            reference_date=reference_date,
+        )
+        return sql, []
+
+    def field_cast_sql(self, db_type, internal_type=None):
         """
         Given a column type (e.g. 'BLOB', 'VARCHAR'), returns the SQL necessary
         to cast it before using it in a WHERE statement. Note that the
@@ -163,27 +202,29 @@ class DatabaseOperations(BaseDatabaseOperations):
         """
         return super(DatabaseOperations, self).last_executed_query(cursor, cursor.last_sql, cursor.last_params)
 
-    #def savepoint_create_sql(self, sid):
-    #    """
-    #    Returns the SQL for starting a new savepoint. Only required if the
-    #    "uses_savepoints" feature is True. The "sid" parameter is a string
-    #    for the savepoint id.
-    #    """
-    #    return "SAVE TRANSACTION %s" % sid
+    def savepoint_create_sql(self, sid):
+       """
+       Returns the SQL for starting a new savepoint. Only required if the
+       "uses_savepoints" feature is True. The "sid" parameter is a string
+       for the savepoint id.
+       """
+       print "SAVE POINR!@#!#!@"
+       return "SAVE TRANSACTION %s" % sid
 
-    #def savepoint_commit_sql(self, sid):
-    #    """
-    #    Returns the SQL for committing the given savepoint.
-    #    """
-    #    return "COMMIT TRANSACTION %s" % sid
+    def savepoint_commit_sql(self, sid):
+       """
+       Returns the SQL for committing the given savepoint.
+       """
+       print "SAVE POINR"
+       return "COMMIT TRANSACTION %s" % sid
 
-    #def savepoint_rollback_sql(self, sid):
-    #    """
-    #    Returns the SQL for rolling back the given savepoint.
-    #    """
-    #    return "ROLLBACK TRANSACTION %s" % sid
+    def savepoint_rollback_sql(self, sid):
+       """
+       Returns the SQL for rolling back the given savepoint.
+       """
+       return "ROLLBACK TRANSACTION %s" % sid
 
-    def sql_flush(self, style, tables, sequences):
+    def sql_flush(self, style, tables, sequences, allow_cascade=False):
         """
         Returns a list of SQL statements required to remove all data from
         the given database tables (without actually removing the tables
@@ -330,11 +371,13 @@ class DatabaseOperations(BaseDatabaseOperations):
         if value is None:
             return None
         if isinstance(value, decimal.Decimal):
+            print value
             context = decimal.getcontext().copy()
             context.prec = max_digits
-            return "%.*f" % (decimal_places, value.quantize(decimal.Decimal(".1") ** decimal_places, context=context))
+            #context.rounding = ROUND_FLOOR
+            return "%.*f" % (decimal_places + 1, value.quantize(decimal.Decimal(".1") ** decimal_places, context=context))
         else:
-            return "%.*f" % (decimal_places, value)
+            return "%.*f" % (decimal_places + 1, value)
 
     def convert_values(self, value, field):
         """
@@ -349,7 +392,7 @@ class DatabaseOperations(BaseDatabaseOperations):
             return None
         if field and field.get_internal_type() == 'DateTimeField':
             return value
-        elif field and field.get_internal_type() == 'DateField':
+        elif field and field.get_internal_type() == 'DateField' and isinstance(value, datetime.datetime):
             value = value.date() # extract date
         elif field and field.get_internal_type() == 'TimeField' or (isinstance(value, datetime.datetime) and value.year == 1900 and value.month == value.day == 1):
             value = value.time() # extract time
@@ -368,3 +411,19 @@ class DatabaseOperations(BaseDatabaseOperations):
             value = float(value)
         return value
 
+    def return_insert_id(self):
+        """
+        MSSQL implements the RETURNING SQL standard extension differently from
+        the core database backends and this function is essentially a no-op. 
+        The SQL is altered in the SQLInsertCompiler to add the necessary OUTPUT
+        clause.
+        """
+        if self.connection._DJANGO_VERSION < 15:
+            # This gets around inflexibility of SQLInsertCompiler's need to 
+            # append an SQL fragment at the end of the insert query, which also must
+            # expect the full quoted table and column name.
+            return ('/* %s */', '')
+        
+        # Django #19096 - As of Django 1.5, can return None, None to bypass the 
+        # core's SQL mangling.
+        return (None, None)
