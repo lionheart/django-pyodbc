@@ -361,6 +361,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         # SQL Server doesn't support microseconds
         last = '%s-12-31 23:59:59'
         return [first % value, last % value]
+
     def value_to_db_decimal(self, value, max_digits, decimal_places):
         """
         Transform a decimal.Decimal value to an object compatible with what is
@@ -369,7 +370,6 @@ class DatabaseOperations(BaseDatabaseOperations):
         if value is None:
             return None
         if isinstance(value, decimal.Decimal):
-            print value
             context = decimal.getcontext().copy()
             context.prec = max_digits
             #context.rounding = ROUND_FLOOR
