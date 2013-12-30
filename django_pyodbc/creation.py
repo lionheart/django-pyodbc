@@ -91,7 +91,6 @@ class DatabaseCreation(BaseDatabaseCreation):
         if self.connection.ops.on_azure_sql_db:
             self.connection.close()
             settings_dict["NAME"] = 'master'
-
         return super(DatabaseCreation, self)._create_test_db(verbosity, autoclobber)
 
     def _destroy_test_db(self, test_database_name, verbosity):

@@ -108,6 +108,15 @@ The following settings control the behavior of the backend:
 		String. Encoding used to decode data from this database. Default is 'utf-8'.
 
 
+Running tests
+-------------
+
+To run the test suite: 
+```
+python tests\runtests.py --settings=test_django_pyodbc
+
+```
+
 License
 -------
 
@@ -121,6 +130,7 @@ Credits
 * [Michiya Takahashi](https://github.com/michiya)
 * [Filip Wasilewski](http://code.djangoproject.com/ticket/5246)
 * [Ramiro Morales](http://djangopeople.net/ramiro/)
+* [Paul Tax](https://github.com/tax)
 * [Wei guangjing](http://djangopeople.net/vcc/)
 * [mamcx](http://code.djangoproject.com/ticket/5062)
 
