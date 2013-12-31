@@ -128,6 +128,7 @@ Credits
 * [Alex Vidal](https://github.com/avidal)
 * [Dan Loewenherz](http://dlo.me)
 * [Michiya Takahashi](https://github.com/michiya)
+* [Michael Manfre](https://github.com/manfre)
 * [Filip Wasilewski](http://code.djangoproject.com/ticket/5246)
 * [Ramiro Morales](http://djangopeople.net/ramiro/)
 * [Paul Tax](https://github.com/tax)
