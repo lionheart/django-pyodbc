@@ -76,7 +76,9 @@ class SQLCompiler(compiler.SQLCompiler):
         index_start = len(list(self.query.extra_select.keys()))
         values = [self.query.convert_values(v, None, connection=self.connection) for v in row[:index_start]]
         for value, field in zip_longest(row[index_start:], fields):
-            values.append(self.query.convert_values(value, field, connection=self.connection))
+            if field:
+                value = self.query.convert_values(value, field, connection=self.connection)
+            values.append(value)
         return tuple(values)
 
     def _get_ordering(self):
