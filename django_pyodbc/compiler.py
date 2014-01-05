@@ -397,14 +397,19 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
         returns_id = bool(self.return_id and
                           self.connection.features.can_return_id_from_insert)
 
-        result = ['INSERT INTO %s' % qn(opts.db_table)]
-        result.append('(%s)' % ', '.join([qn(c) for c in self.query.columns]))
-
         if returns_id:
-            result.append('OUTPUT inserted.%s' % qn(opts.pk.column))
+            result = ['SET NOCOUNT ON']
+        else:
+            result = []
+
+        result.append('INSERT INTO %s' % qn(opts.db_table))
+        result.append('(%s)' % ', '.join([qn(c) for c in self.query.columns]))
 
         values = [self.placeholder(*v) for v in self.query.values]
         result.append('VALUES (%s)' % ', '.join(values))
+
+        if returns_id:
+            result.append(';\nSELECT SCOPE_IDENTITY()')
 
         params = self.query.params
         sql = ' '.join(result)
@@ -416,16 +421,20 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
 
             if auto_field_column in self.query.columns:
                 quoted_table = self.connection.ops.quote_name(meta.db_table)
+                if returns_id:
+                    result = ['SET NOCOUNT ON']
+                else:
+                    result = []
 
                 if len(self.query.columns) == 1 and not params:
-                    result = ['INSERT INTO %s' % quoted_table]
-                    if returns_id:
-                        result.append('OUTPUT inserted.%s' % qn(opts.pk.column))
-                    result.append('DEFAULT VALUES')
+                    result.append(['INSERT INTO %s DEFAULT VALUES' % quoted_table])
                     sql = ' '.join(result)
                 else:
                     sql = "SET IDENTITY_INSERT %s ON;\n%s;\nSET IDENTITY_INSERT %s OFF" % \
                         (quoted_table, sql, quoted_table)
+
+                if returns_id:
+                    sql += '\n;SELECT SCOPE_IDENTITY()'
 
         return sql, params
 
@@ -437,7 +446,15 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
         # going to be column names (so we can avoid the extra overhead).
         qn = self.connection.ops.quote_name
         opts = self.query.model._meta
-        result = ['INSERT INTO %s' % qn(opts.db_table)]
+        returns_id = bool(self.return_id and
+                          self.connection.features.can_return_id_from_insert)
+
+        if returns_id:
+            result = ['SET NOCOUNT ON']
+        else:
+            result = []
+
+        result.append('INSERT INTO %s' % qn(opts.db_table))
 
         has_fields = bool(self.query.fields)
         fields = self.query.fields if has_fields else [opts.pk]
@@ -463,11 +480,10 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
             for val in values
         ]
 
-        if self.return_id and self.connection.features.can_return_id_from_insert:
+        if returns_id:
             params = params[0]
-            output = 'OUTPUT inserted.%s' % qn(opts.pk.column)
-            result.append(output)
             result.append("VALUES (%s)" % ", ".join(placeholders[0]))
+            result.append('\n;SELECT SCOPE_IDENTITY()')
             return [(" ".join(result), tuple(params))]
 
         items = [
