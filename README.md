@@ -7,6 +7,8 @@ Features
 --------
 
 * Supports Django 1.4+.
+* Native Unicode support. Every string that goes in is stored as Unicode, and every string that goes out of the database is returned as Unicode. No conversion to/from intermediate encodings takes place, so things like max_length in CharField works just like expected.
+* Both Windows Authentication (Integrated Security) and SQL Server Authentication supported.
 * Supports LIMIT+OFFSET and offset w/o LIMIT emulation under SQL Server 2005.
 * Supports LIMIT+OFFSET under SQL Server 2000.
 * Transparently supports Django's TextField both under SQL Server 2000 and 2005.
@@ -103,7 +105,7 @@ Running tests
 To run the test suite:
 
 ```
-python ./tests/runtests.py --settings=test_django_pyodbc
+python tests/runtests.py --settings=test_django_pyodbc
 ```
 
 License
@@ -114,13 +116,22 @@ See [LICENSE](LICENSE).
 Credits
 -------
 
+* [Adam Vandenber](javascript:; "For code to distinguish between different Query classes when subclassing them.")
 * [Alex Vidal](https://github.com/avidal)
 * [Dan Loewenherz](http://dlo.me)
-* [Michiya Takahashi](https://github.com/michiya)
+* [Filip Wasilewski](javascript:; "For his pioneering work, proving this was possible and profusely documenting the code with links to relevant vendor technical articles. http://code.djangoproject.com/ticket/5246")
 * [Michael Manfre](https://github.com/manfre)
-* [Filip Wasilewski](http://code.djangoproject.com/ticket/5246)
-* [Ramiro Morales](http://djangopeople.net/ramiro/)
+* [Michiya Takahashi](https://github.com/michiya)
 * [Paul Tax](https://github.com/tax)
+* [Ramiro Morales](http://djangopeople.net/ramiro/)
 * [Wei guangjing](http://djangopeople.net/vcc/)
-* [mamcx](http://code.djangoproject.com/ticket/5062)
+* [mamcx](javascript:; "For the first implementation using pymssql. http://code.djangoproject.com/ticket/5062")
+
+Thanks
+------
+
+From the original project README.
+
+* All the Django core developers, especially Malcolm Tredinnick. For being an example of technical excellence and for building such an impressive community.
+* The Oracle Django team (Matt Boersma, Ian Kelly) for some excellent ideas when it comes to implement a custom Django DB backend.
 
