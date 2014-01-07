@@ -1,7 +1,7 @@
 django-pyodbc
 =============
 
-Django-pyodbc is a [Django](http://djangoproject.com) SQL Server DB backend powered by the [pyodbc](https://github.com/mkleehammer/pyodbc) library.
+django-pyodbc is a [Django](http://djangoproject.com) SQL Server DB backend powered by the [pyodbc](https://github.com/mkleehammer/pyodbc) library. pyodbc is a mature, viable way to access SQL Server from Python in multiple platforms and is actively maintained. It's also used by SQLAlchemy for SQL Server connections.
 
 This is a fork of the original [django-pyodbc](https://code.google.com/p/django-pyodbc/), hosted on Google Code and last updated in 2011.
 
