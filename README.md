@@ -1,7 +1,7 @@
 django-pyodbc
 =============
 
-A [Django](http://djangoproject.com) MS SQL Server external DB backend that uses ODBC by employing the [pyodbc](http://pyodbc.sourceforge.net) library. Tested on Microsoft SQL Server 2000, 2005, 2012. Please open a pull request if you have success running this backend with another SQL Server version.
+A [Django](http://djangoproject.com) MS SQL Server external DB backend that uses ODBC by employing the [pyodbc](https://github.com/mkleehammer/pyodbc) library. Tested on Microsoft SQL Server 2000, 2005, 2012. Please open a pull request if you have success running this backend with another SQL Server version.
 
 Features
 --------
