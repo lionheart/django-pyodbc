@@ -119,13 +119,13 @@ Credits
 * [Adam Vandenber](javascript:; "For code to distinguish between different Query classes when subclassing them.")
 * [Alex Vidal](https://github.com/avidal)
 * [Dan Loewenherz](http://dlo.me)
-* [Filip Wasilewski](javascript:; "For his pioneering work, proving this was possible and profusely documenting the code with links to relevant vendor technical articles. http://code.djangoproject.com/ticket/5246")
+* [Filip Wasilewski](http://code.djangoproject.com/ticket/5246 "For his pioneering work, proving this was possible and profusely documenting the code with links to relevant vendor technical articles.")
 * [Michael Manfre](https://github.com/manfre)
 * [Michiya Takahashi](https://github.com/michiya)
 * [Paul Tax](https://github.com/tax)
 * [Ramiro Morales](http://djangopeople.net/ramiro/)
 * [Wei guangjing](http://djangopeople.net/vcc/)
-* [mamcx](javascript:; "For the first implementation using pymssql. http://code.djangoproject.com/ticket/5062")
+* [mamcx](http://code.djangoproject.com/ticket/5062 "For the first implementation using pymssql.")
 
 Thanks
 ------
