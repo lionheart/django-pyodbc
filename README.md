@@ -6,11 +6,11 @@ A [Django](http://djangoproject.com) MS SQL Server external DB backend that uses
 Features
 --------
 
-* Supports Django 1.4+.
+* Support for Django 1.4 and up.
 * Native Unicode support. Every string that goes in is stored as Unicode, and every string that goes out of the database is returned as Unicode. No conversion to/from intermediate encodings takes place, so things like max_length in CharField works just like expected.
-* Both Windows Authentication (Integrated Security) and SQL Server Authentication supported.
-* Supports LIMIT+OFFSET and offset w/o LIMIT emulation under SQL Server 2005.
-* Supports LIMIT+OFFSET under SQL Server 2000.
+* Support for both Windows Authentication (Integrated Security) and SQL Server Authentication.
+* Support for LIMIT+OFFSET and offset w/o LIMIT emulation under SQL Server 2005.
+* Support for LIMIT+OFFSET under SQL Server 2000.
 * Transparently supports Django's TextField both under SQL Server 2000 and 2005.
 * Passes most of the tests of the Django test suite.
 * Compatible with SQL Server and SQL Server Native Client from Microsoft (Windows) and FreeTDS ODBC drivers (Linux).
@@ -57,7 +57,7 @@ The following settings control the behavior of the backend:
 
 `PASSWORD` String. Database user password.
 
-`OPTIONS` Dictionary. Current available keys are:
+`OPTIONS` Dictionary. Current available keys:
 
 * ``driver``
 
@@ -99,8 +99,8 @@ The following settings control the behavior of the backend:
     String. Encoding used to decode data from this database. Default is 'utf-8'.
 
 
-Running tests
--------------
+Tests
+-----
 
 To run the test suite:
 
