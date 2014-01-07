@@ -100,7 +100,8 @@ The following settings control the behavior of the backend:
 Running tests
 -------------
 
-To run the test suite: 
+To run the test suite:
+
 ```
 python ./tests/runtests.py --settings=test_django_pyodbc
 ```
@@ -108,7 +109,7 @@ python ./tests/runtests.py --settings=test_django_pyodbc
 License
 -------
 
-See LICENSE.
+See [LICENSE](LICENSE).
 
 Credits
 -------
