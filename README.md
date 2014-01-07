@@ -42,7 +42,7 @@ Installation
     }
     ```
 
-3. That's all!
+3. That's it! You're done.
 
 Configuration
 -------------
