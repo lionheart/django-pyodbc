@@ -57,52 +57,44 @@ The following settings control the behavior of the backend:
 
 `OPTIONS` Dictionary. Current available keys are:
 
-    ``driver``
-        String. ODBC Driver to use. Default is ``"SQL Server"`` on Windows and
-        ``"FreeTDS"`` on other platforms.
+* ``driver``
 
-    ``dsn``
-        String. A named DSN can be used instead of ``HOST``.
+    String. ODBC Driver to use. Default is ``"SQL Server"`` on Windows and ``"FreeTDS"`` on other platforms.
 
-    ``autocommit``
-        Boolean. Indicates if pyodbc should direct the the ODBC driver to
-        activate the autocommit feature. Default value is ``False``.
+* ``dsn``
 
-    ``MARS_Connection``
-        Boolean. Only relevant when running on Windows and with SQL Server 2005
-        or later through MS *SQL Server Native client* driver (i.e. setting
-        ``driver`` to ``"SQL Server Native Client 11.0"``). See
-        http://msdn.microsoft.com/en-us/library/ms131686.aspx.
-        Default value is ``False``.
+    String. A named DSN can be used instead of ``HOST``.
 
-    ``host_is_server``
-        Boolean. Only relevant if using the FreeTDS ODBC driver under
-        Unix/Linux.
+* ``autocommit``
 
-        By default, when using the FreeTDS ODBC driver the value specified in
-        the ``HOST`` setting is used in a ``SERVERNAME`` ODBC
-        connection string component instead of being used in a ``SERVER``
-        component; this means that this value should be the name of a
-        *dataserver* definition present in the ``freetds.conf`` FreeTDS
-        configuration file instead of a hostname or an IP address.
+    Boolean. Indicates if pyodbc should direct the the ODBC driver to activate the autocommit feature. Default value is ``False``.
 
-        But if this option is present and it's value is True, this special
-        behavior is turned off.
+* ``MARS_Connection``
 
-        See http://freetds.org/userguide/dsnless.htm for more information.
+    Boolean. Only relevant when running on Windows and with SQL Server 2005 or later through MS *SQL Server Native client* driver (i.e. setting ``driver`` to ``"SQL Server Native Client 11.0"``). See http://msdn.microsoft.com/en-us/library/ms131686.aspx.  Default value is ``False``.
 
-    ``extra_params``
-        String. Additional parameters for the ODBC connection. The format is
-        ``"param=value;param=value"``.
+* ``host_is_server``
 
-    ``collation``
-        String. Name of the collation to use when performing text field lookups
-        against the database. For Chinese language you can set it to 
-        ``"Chinese_PRC_CI_AS"``. The default collation for the database
-        will be used if no value is specified.
+    Boolean. Only relevant if using the FreeTDS ODBC driver under Unix/Linux.
 
-	``encoding``
-		String. Encoding used to decode data from this database. Default is 'utf-8'.
+    By default, when using the FreeTDS ODBC driver the value specified in the ``HOST`` setting is used in a ``SERVERNAME`` ODBC connection string component instead of being used in a ``SERVER`` component; this means that this value should be the name of a *dataserver* definition present in the ``freetds.conf`` FreeTDS configuration file instead of a hostname or an IP address.
+
+    But if this option is present and it's value is True, this special behavior is turned off.
+
+    See http://freetds.org/userguide/dsnless.htm for more information.
+
+* ``extra_params``
+
+    String. Additional parameters for the ODBC connection. The format is
+    ``"param=value;param=value"``.
+
+* ``collation``
+
+    String. Name of the collation to use when performing text field lookups against the database. For Chinese language you can set it to ``"Chinese_PRC_CI_AS"``. The default collation for the database will be used if no value is specified.
+
+* ``encoding``
+
+    String. Encoding used to decode data from this database. Default is 'utf-8'.
 
 
 Running tests
