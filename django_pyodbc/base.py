@@ -214,10 +214,10 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             else:
                 driver = 'FreeTDS'
 
-            if driver == 'FreeTDS' or driver.endswith('/libtdsodbc.so'):
-                driver_is_freetds = True
-            else:
-                driver_is_freetds = False
+        if driver == 'FreeTDS' or driver.endswith('/libtdsodbc.so'):
+            driver_is_freetds = True
+        else:
+            driver_is_freetds = False
 
         # Microsoft driver names assumed here are:
         # * SQL Server
