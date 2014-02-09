@@ -11,6 +11,12 @@ from django.db.backends import BaseDatabaseOperations
 
 from django_pyodbc.compat import smart_text, string_types, timezone
 
+try:
+    import pytz
+except ImportError:
+    pytz = None
+
+
 EDITION_AZURE_SQL_DB = 5
 
 class DatabaseOperations(BaseDatabaseOperations):
