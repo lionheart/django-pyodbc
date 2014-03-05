@@ -131,7 +131,16 @@ class SQLCompiler(compiler.SQLCompiler):
             self.modify_query(strategy, ordering, out_cols)
 
         if strategy == USE_ROW_NUMBER:
-            ord = ', '.join(['%s %s' % pair for pair in self._ord])
+            columns_to_order_by = []
+            for alias_name, type_of_order in self._ord:
+                for column in self.get_columns(True):
+                    if column.endswith("AS [%s]" % alias_name):
+                        columns_to_order_by.append((column.partition("AS")[0].strip(),type_of_order))
+                        break
+            if len(columns_to_order_by):
+                ord = ', '.join(['%s %s' % pair for pair in columns_to_order_by])
+            else:
+                ord = ', '.join(['%s %s' % pair for pair in self._ord])
             self.query.ordering_aliases.append('(ROW_NUMBER() OVER (ORDER BY %s)) AS [rn]' % ord)
 
         # This must come after 'select' and 'ordering' -- see docstring of
