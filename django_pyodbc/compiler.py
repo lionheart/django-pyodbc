@@ -2,6 +2,7 @@ from django.db.models.sql import compiler
 from datetime import datetime
 
 from django_pyodbc.compat import zip_longest
+#from django import VERSION as django_VERSION
 
 REV_ODIR = {
     'ASC': 'DESC',
@@ -50,7 +51,7 @@ class SQLCompiler(compiler.SQLCompiler):
         Sets the value of the self._ord and self.default_reverse_ordering
         attributes.
         Can modify the values of the out_cols list argument and the
-        self.query.ordering_aliases attribute.
+        self.query.ordering_aliases attribute (for Django<=1.5.4 but not 1.6).
         """
         self.default_reverse_ordering = False
         self._ord = []
@@ -60,7 +61,14 @@ class SQLCompiler(compiler.SQLCompiler):
             if ord_spec_item.endswith(' ASC') or ord_spec_item.endswith(' DESC'):
                 parts = ord_spec_item.split()
                 col, odir = ' '.join(parts[:-1]), parts[-1]
-                if col not in self.query.ordering_aliases and col.strip('[]') not in extra_select_aliases:
+                # The attribute `ordering_aliases` was moved out of Query (self.query) and into SQLCompiler (self) in Django 1.6 
+                print dir(self)
+                try:
+                    ordering_aliases = self.ordering_aliases
+                except AttributeError:
+                    print dir(self.query)
+                    ordering_aliases = self.query.ordering_aliases
+                if col not in ordering_aliases and col.strip('[]') not in extra_select_aliases:
                     if col.isdigit():
                         cnt += 1
                         n = int(col)-1
@@ -84,11 +92,16 @@ class SQLCompiler(compiler.SQLCompiler):
                         cnt += 1
                         alias = 'OrdAlias%d' % cnt
                         self._ord.append((alias, odir))
-                        self.query.ordering_aliases.append('%s AS [%s]' % (col, alias))
+                        ordering_aliases.append('%s AS [%s]' % (col, alias))
                     else:
                         self._ord.append((col, odir))
                 else:
                     self._ord.append((col, odir))
+                # Django >= 1.6 expects ordering_aliases in self (SQLCompiler)
+                setattr(self, 'ordering_aliases', ordering_aliases)
+                # Django <= 1.5.4 expects ordering_aliases in self.query (Query)
+                setattr(self.query, 'ordering_aliases', ordering_aliases)
+
 
         if strategy == USE_ROW_NUMBER and not self._ord and 'RAND()' in ordering:
             self._ord.append(('RAND()',''))
@@ -101,6 +114,41 @@ class SQLCompiler(compiler.SQLCompiler):
             if pk_col not in out_cols:
                 out_cols.append(pk_col)
 
+
+    def get_ordering(self, *args, **kwargs):
+        # Django 1.6 added `o_params` as an additional return value for Query.get_ordering()
+        try:
+            o_params = None
+            # Django 1.5.4
+            ordering, ordering_group_by = super(SQLCompiler, self).get_ordering(*args, **kwargs)
+            return ordering, o_params, ordering_group_by
+        except:
+            # Django 1.6
+            return super(SQLCompiler, self).get_ordering(*args, **kwargs)
+
+
+    def get_columns(self, *args, **kwargs):
+        # Django 1.6 added `o_params` as an additional return value for Query.get_ordering()
+
+        if self.connection._DJANGO_VERSION >= 16:
+            # Django 1.6, returns two arguments
+            sql_strings, aliases = super(SQLCompiler, self).get_columns(*args, **kwargs)
+            return sql_strings, aliases
+        else:
+            # Django 1.5.4 only provides a single return value, so augment it with None to be reverse compatible in django-pyodbc
+            return super(SQLCompiler, self).get_columns(*args, **kwargs), None
+
+
+    def get_grouping(self, ordering_group_by, having_group_by=''):
+        "SQLCompiler.get_grouping, but with reversed order of arguments to remain compatible between Django 1.5 <-> django-pyodbc"
+        try:
+            # Django 1.6
+            return super(SQLCompiler, self).get_columns(having_group_by, ordering_group_by)
+        except:
+            # Django 1.5.4
+            return super(SQLCompiler, self).get_columns(ordering_group_by)
+
+
     def _as_sql(self, strategy):
         """
         Helper method, called from as_sql()
@@ -111,15 +159,25 @@ class SQLCompiler(compiler.SQLCompiler):
         """
         # get_columns needs to be called before get_ordering to populate
         # _select_alias.
-        out_cols = self.get_columns(True)
-        ordering, ordering_group_by = self.get_ordering()
+        out_cols = self.get_columns(with_aliases=True)[0]
+
+        # `ordering_aliases` was moved out of Query (self.query) and into SQLCompiler (self) in Django 1.6 
+        #ordering_aliases = getattr(self, 'ordering_aliases', getattr(self.query, 'ordering_aliases', []))
+        ordering, o_params, ordering_group_by = self.get_ordering()
+        print dir(self)
+        try:
+            ordering_aliases = self.ordering_aliases
+        except AttributeError:
+            print dir(self.query)
+            ordering_aliases = self.query.ordering_aliases
+
         if strategy == USE_ROW_NUMBER:
             if not ordering:
                 meta = self.query.get_meta()
                 qn = self.quote_name_unless_alias
                 # Special case: pk not in out_cols, use random ordering.
                 #
-                if '%s.%s' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column)) not in self.get_columns():
+                if '%s.%s' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column)) not in self.get_columns()[0]:
                     ordering = ['RAND()']
                     # XXX: Maybe use group_by field for ordering?
                     #if self.group_by:
@@ -133,7 +191,7 @@ class SQLCompiler(compiler.SQLCompiler):
         if strategy == USE_ROW_NUMBER:
             columns_to_order_by = []
             for alias_name, type_of_order in self._ord:
-                for column in self.get_columns(True):
+                for column in self.get_columns(with_aliases=True)[0]:
                     if column.endswith("AS [%s]" % alias_name):
                         columns_to_order_by.append((column.partition("AS")[0].strip(),type_of_order))
                         break
@@ -141,7 +199,11 @@ class SQLCompiler(compiler.SQLCompiler):
                 ord = ', '.join(['%s %s' % pair for pair in columns_to_order_by])
             else:
                 ord = ', '.join(['%s %s' % pair for pair in self._ord])
-            self.query.ordering_aliases.append('(ROW_NUMBER() OVER (ORDER BY %s)) AS [rn]' % ord)
+            ordering_aliases.append('(ROW_NUMBER() OVER (ORDER BY %s)) AS [rn]' % ord)        
+            # Django >= 1.6 expects ordering_aliases in self (SQLCompiler)
+            setattr(self, 'ordering_aliases', ordering_aliases)
+            # Django <= 1.5.4 expects ordering_aliases in self.query (Query)
+            setattr(self.query, 'ordering_aliases', ordering_aliases)
 
         # This must come after 'select' and 'ordering' -- see docstring of
         # get_from_clause() for details.
@@ -166,7 +228,7 @@ class SQLCompiler(compiler.SQLCompiler):
         else:
             if strategy == USE_TOP_HMARK and self.query.high_mark is not None:
                 result.append('TOP %s' % self.query.high_mark)
-            result.append(', '.join(out_cols + self.query.ordering_aliases))
+            result.append(', '.join(out_cols + ordering_aliases))
 
         result.append('FROM')
         result.extend(from_)
@@ -270,8 +332,9 @@ class SQLCompiler(compiler.SQLCompiler):
         # SQL Server 2000, offset without limit case
         # get_columns needs to be called before get_ordering to populate
         # select_alias.
-        self.get_columns(with_col_aliases)
-        ordering, ordering_group_by = self.get_ordering()
+        self.get_columns(with_aliases=with_col_aliases)
+        # ordering, ordering_group_by = self.get_ordering()  # <-- doesn't work in Django 1.6
+        ordering, o_params, ordering_group_by = self.get_ordering()
         if ordering:
             ord = ', '.join(ordering)
         else:

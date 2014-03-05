@@ -74,7 +74,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         if lookup_type == 'day':
             return "Convert(datetime, Convert(varchar(12), %s, 112))" % field_name
 
-    def field_cast_sql(self, db_type):
+    def field_cast_sql(self, db_type, internal_type):
         """
         Given a column type (e.g. 'BLOB', 'VARCHAR'), returns the SQL necessary
         to cast it before using it in a WHERE statement. Note that the
