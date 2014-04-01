@@ -1,4 +1,4 @@
-"""
+﻿"""
 MS SQL Server database backend for Django.
 """
 import datetime
@@ -27,6 +27,7 @@ from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDa
 from django.db.backends.signals import connection_created
 from django.conf import settings
 from django import VERSION as DjangoVersion
+
 if DjangoVersion[:2] == (1, 7):
     _DJANGO_VERSION = 17
 elif DjangoVersion[:2] == (1, 6):
@@ -50,6 +51,7 @@ from django_pyodbc.introspection import DatabaseIntrospection
 
 DatabaseError = Database.Error
 IntegrityError = Database.IntegrityError
+
 
 class DatabaseFeatures(BaseDatabaseFeatures):
     can_use_chunked_reads = False
@@ -75,12 +77,12 @@ class DatabaseFeatures(BaseDatabaseFeatures):
         # keep it compatible with Django 1.3 and 1.4
         return self.supports_transactions
 
+
 class DatabaseWrapper(BaseDatabaseWrapper):
     _DJANGO_VERSION = _DJANGO_VERSION
     drv_name = None
     driver_supports_utf8 = None
     MARS_Connection = False
-    unicode_results = False
     datefirst = 7
     Database = Database
 
@@ -126,7 +128,6 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         if options:
             self.MARS_Connection = options.get('MARS_Connection', False)
             self.datefirst = options.get('datefirst', 7)
-            self.unicode_results = options.get('unicode_results', False)
             self.encoding = options.get('encoding', 'utf-8')
             self.driver_supports_utf8 = options.get('driver_supports_utf8', None)
             self.driver_needs_utf8 = options.get('driver_needs_utf8', None)
@@ -160,6 +161,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         settings_dict = self.settings_dict
         if not settings_dict['NAME']:
             from django.core.exceptions import ImproperlyConfigured
+
             raise ImproperlyConfigured(
                 "settings.DATABASES is improperly configured. "
                 "Please supply the NAME value.")
@@ -177,13 +179,50 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             conn_params['host'] = settings_dict['HOST']
         if settings_dict['PORT']:
             conn_params['port'] = settings_dict['PORT']
+
         return conn_params
 
     def get_new_connection(self, conn_params):
         return Database.connect(**conn_params)
 
     def init_connection_state(self):
-        pass
+        cursor = self._create_cursor()
+        cursor.execute('SET DATEFORMAT ymd; SET DATEFIRST %s' % self.datefirst)
+        if self.ops.sql_server_ver < 2005:
+            self.creation.data_types['TextField'] = 'ntext'
+            self.features.can_return_id_from_insert = False
+
+        ms_sqlncli = re.compile('^((LIB)?SQLN?CLI|LIBMSODBCSQL)')
+        self.drv_name = self.connection.getinfo(Database.SQL_DRIVER_NAME).upper()
+
+        if self.ops.sql_server_ver >= 2005 and ms_sqlncli.match(self.drv_name) and self.MARS_Connection:
+            # How to to activate it: Add 'MARS_Connection': True
+            # to the DATABASE_OPTIONS dictionary setting
+            self.features.can_use_chunked_reads = True
+
+        if self.drv_name.startswith('LIBTDSODBC'):
+            # FreeTDS can't execute some sql queries like CREATE DATABASE etc.
+            # in multi-statement, so we need to commit the above SQL sentence(s)
+            # to avoid this
+            if not self.connection.autocommit:
+                self.connection.commit()
+
+            freetds_version = self.connection.getinfo(Database.SQL_DRIVER_VER)
+            if self.driver_supports_utf8 is None:
+                try:
+                    from distutils.version import LooseVersion
+                except ImportError:
+                    warnings.warn(Warning(
+                        'Using naive FreeTDS version detection. Install distutils to get better version detection.'))
+                    self.driver_supports_utf8 = not freetds_version.startswith('0.82')
+                else:
+                    # This is the minimum version that properly supports
+                    # Unicode. Though it started in version 0.82, the
+                    # implementation in that version was buggy.
+                    self.driver_supports_utf8 = LooseVersion(freetds_version) >= LooseVersion('0.91')
+
+        elif self.driver_supports_utf8 is None:
+            self.driver_supports_utf8 = (self.drv_name == 'SQLSRV32.DLL' or ms_sqlncli.match(self.drv_name))
 
     def _set_autocommit(self, autocommit):
         pass
@@ -264,73 +303,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         connectionstring = ';'.join(cstr_parts)
         return connectionstring
 
-    def _cursor(self):
-        new_conn = False
-        settings_dict = self.settings_dict
+    def _create_cursor(self):
+        return self.connection.cursor()
 
-
-        if self.connection is None:
-            new_conn = True
-            connstr = self._get_connection_string()#';'.join(cstr_parts)
-            options = settings_dict['OPTIONS']
-            autocommit = options.get('autocommit', False)
-            if self.unicode_results:
-                self.connection = Database.connect(connstr, \
-                        autocommit=autocommit, \
-                        unicode_results='True')
-            else:
-                self.connection = Database.connect(connstr, \
-                        autocommit=autocommit)
-            connection_created.send(sender=self.__class__, connection=self)
-
-        cursor = self.connection.cursor()
-        if new_conn:
-            # Set date format for the connection. Also, make sure Sunday is
-            # considered the first day of the week (to be consistent with the
-            # Django convention for the 'week_day' Django lookup) if the user
-            # hasn't told us otherwise
-
-            if not self.ops.is_db2:
-                # IBM's DB2 doesn't support this syntax and a suitable
-                # equivalent could not be found.
-                cursor.execute("SET DATEFORMAT ymd; SET DATEFIRST %s" % self.datefirst)
-            if self.ops.sql_server_ver < 2005:
-                self.creation.data_types['TextField'] = 'ntext'
-                self.features.can_return_id_from_insert = False
-
-            ms_sqlncli = re.compile('^((LIB)?SQLN?CLI|LIBMSODBCSQL)')
-            self.drv_name = self.connection.getinfo(Database.SQL_DRIVER_NAME).upper()
-
-            # http://msdn.microsoft.com/en-us/library/ms131686.aspx
-            if self.ops.sql_server_ver >= 2005 and ms_sqlncli.match(self.drv_name) and self.MARS_Connection:
-                # How to to activate it: Add 'MARS_Connection': True
-                # to the DATABASE_OPTIONS dictionary setting
-                self.features.can_use_chunked_reads = True
-
-            if self.drv_name.startswith('LIBTDSODBC'):
-                # FreeTDS can't execute some sql queries like CREATE DATABASE etc.
-                # in multi-statement, so we need to commit the above SQL sentence(s)
-                # to avoid this
-                if not self.connection.autocommit:
-                    self.connection.commit()
-
-                freetds_version = self.connection.getinfo(Database.SQL_DRIVER_VER)
-                if self.driver_supports_utf8 is None:
-                    try:
-                        from distutils.version import LooseVersion
-                    except ImportError:
-                        warnings.warn(Warning('Using naive FreeTDS version detection. Install distutils to get better version detection.'))
-                        self.driver_supports_utf8 = not freetds_version.startswith('0.82')
-                    else:
-                        # This is the minimum version that properly supports
-                        # Unicode. Though it started in version 0.82, the
-                        # implementation in that version was buggy.
-                        self.driver_supports_utf8 = LooseVersion(freetds_version) >= LooseVersion('0.91')
-
-            elif self.driver_supports_utf8 is None:
-                self.driver_supports_utf8 = (self.drv_name == 'SQLSRV32.DLL'
-                                             or ms_sqlncli.match(self.drv_name))
-
+    def create_cursor(self):
+        cursor = self._create_cursor()
         return CursorWrapper(cursor, self.driver_supports_utf8, self.encoding)
 
     def _execute_foreach(self, sql, table_names=None):
@@ -360,6 +337,7 @@ class CursorWrapper(object):
     A wrapper around the pyodbc's cursor that takes in account a) some pyodbc
     DB-API 2.0 implementation and b) some common ODBC driver particularities.
     """
+
     def __init__(self, cursor, driver_supports_utf8, encoding=""):
         self.cursor = cursor
         self.driver_supports_utf8 = driver_supports_utf8
