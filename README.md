@@ -130,9 +130,6 @@ Credits
 * [Wei guangjing](http://djangopeople.net/vcc/)
 * [mamcx](http://code.djangoproject.com/ticket/5062 "For the first implementation using pymssql.")
 
-Thanks
-------
-
 From the original project README.
 
 * All the Django core developers, especially Malcolm Tredinnick. For being an example of technical excellence and for building such an impressive community.
