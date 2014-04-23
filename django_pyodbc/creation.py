@@ -70,8 +70,11 @@ class DatabaseCreation(BaseDatabaseCreation):
             else:
                 from django.db.backends.creation import TEST_DATABASE_PREFIX
                 test_name = TEST_DATABASE_PREFIX + settings_dict['NAME']
-        if not settings_dict['TEST_NAME']:
-            settings_dict['TEST_NAME'] = test_name
+        if self.connection._DJANGO_VERSION >= 17:
+            settings_dict['TEST']['NAME'] = test_name
+        else:
+            if not settings_dict['TEST_NAME']:
+                settings_dict['TEST_NAME'] = test_name
 
         if not self.connection.test_create:
             # use the existing database instead of creating a new one
@@ -134,6 +137,10 @@ class DatabaseCreation(BaseDatabaseCreation):
 
     def sql_table_creation_suffix(self):
         suffix = []
-        if self.connection.settings_dict['TEST_COLLATION']:
-            suffix.append('COLLATE %s' % self.connection.settings_dict['TEST_COLLATION'])
+        if self.connection._DJANGO_VERSION >= 17:
+            test_collation = self.connection.settings_dict['TEST']['COLLATION']
+        else:
+            test_collation = self.connection.settings_dict['TEST_COLLATION']
+        if test_collation:
+            suffix.append('COLLATE %s' % test_collation)
         return ' '.join(suffix)
