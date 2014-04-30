@@ -304,7 +304,7 @@ class SQLCompiler(compiler.SQLCompiler):
         # derived tables, subqueries, and common table expressions,
         # unless TOP or FOR XML is also specified.
         if getattr(self.query, '_mssql_ordering_not_allowed', False):
-            if django.VERSION[1] == 1 and django.VERSION[2] < 6:
+            if django.VERSION[0] == 1 and django.VERSION[1] < 6:
                 return (None, [])
             return (None, [], [])
         return super(SQLCompiler, self).get_ordering()
