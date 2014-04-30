@@ -62,7 +62,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
 class DatabaseWrapper(BaseDatabaseWrapper):
     _DJANGO_VERSION = _DJANGO_VERSION
     drv_name = None
-    driver_needs_encoding = None
+    driver_needs_utf8 = None
     MARS_Connection = False
     unicode_results = False
     datefirst = 7
@@ -230,11 +230,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 self.features.can_return_id_from_insert = False
 
             ms_sqlncli = re.compile('^((LIB)?SQLN?CLI|LIBMSODBCSQL)')
-            if self.driver_needs_encoding is None:
-                self.driver_needs_encoding = True
+            if self.driver_needs_utf8 is None:
+                self.driver_needs_utf8 = True
                 self.drv_name = self.connection.getinfo(Database.SQL_DRIVER_NAME).upper()
                 if self.drv_name == 'SQLSRV32.DLL' or ms_sqlncli.match(self.drv_name):
-                    self.driver_needs_encoding = False
+                    self.driver_needs_utf8 = False
 
                 # http://msdn.microsoft.com/en-us/library/ms131686.aspx
                 if self.ops.sql_server_ver >= 2005 and ms_sqlncli.match(self.drv_name) and self.MARS_Connection:
@@ -248,7 +248,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             if self.drv_name.startswith('LIBTDSODBC') and not self.connection.autocommit:
                 self.connection.commit()
 
-        return CursorWrapper(cursor, self.driver_needs_encoding, self.encoding)
+        return CursorWrapper(cursor, self.driver_needs_utf8, self.encoding)
 
     def _execute_foreach(self, sql, table_names=None):
         cursor = self.cursor()
@@ -277,15 +277,15 @@ class CursorWrapper(object):
     A wrapper around the pyodbc's cursor that takes in account a) some pyodbc
     DB-API 2.0 implementation and b) some common ODBC driver particularities.
     """
-    def __init__(self, cursor, driver_needs_encoding, encoding=""):
+    def __init__(self, cursor, driver_needs_utf8, encoding=""):
         self.cursor = cursor
-        self.driver_needs_encoding = driver_needs_encoding
+        self.driver_needs_utf8 = driver_needs_utf8
         self.last_sql = ''
         self.last_params = ()
         self.encoding = encoding
 
     def format_sql(self, sql, n_params=None):
-        if self.driver_needs_encoding and isinstance(sql, text_type):
+        if self.driver_needs_utf8 and isinstance(sql, text_type):
             # FreeTDS (and other ODBC drivers?) don't support Unicode yet, so
             # we need to encode the SQL clause itself
             sql = sql.encode(self.encoding)
@@ -301,14 +301,14 @@ class CursorWrapper(object):
         fp = []
         for p in params:
             if isinstance(p, text_type):
-                if self.driver_needs_encoding:
+                if self.driver_needs_utf8:
                     # FreeTDS (and other ODBC drivers?) doesn't support Unicode
                     # yet, so we need to encode parameters
                     fp.append(p.encode(self.encoding))
                 else:
                     fp.append(p)
             elif isinstance(p, binary_type):
-                if self.driver_needs_encoding:
+                if self.driver_needs_utf8:
                     fp.append(p.decode(self.encoding).encode(self.encoding))
                 else:
                     fp.append(p)
@@ -361,13 +361,13 @@ class CursorWrapper(object):
         (pyodbc Rows are not sliceable).
         """
         needs_utc = _DJANGO_VERSION >= 14 and settings.USE_TZ
-        if not (needs_utc or self.driver_needs_encoding):
+        if not (needs_utc or self.driver_needs_utf8):
             return tuple(rows)
         # FreeTDS (and other ODBC drivers?) don't support Unicode yet, so we
         # need to decode data coming from the DB
         fr = []
         for row in rows:
-            if self.driver_needs_encoding and isinstance(row, binary_type):
+            if self.driver_needs_utf8 and isinstance(row, binary_type):
                 row = row.decode(self.encoding)
 
             elif needs_utc and isinstance(row, datetime.datetime):
