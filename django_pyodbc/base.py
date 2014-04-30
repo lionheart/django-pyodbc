@@ -287,8 +287,8 @@ class CursorWrapper(object):
     def format_sql(self, sql, n_params=None):
         if self.driver_needs_utf8 and isinstance(sql, text_type):
             # FreeTDS (and other ODBC drivers?) don't support Unicode yet, so
-            # we need to encode the SQL clause itself in utf-8
-            sql = sql.encode('utf-8')
+            # we need to encode the SQL clause itself
+            sql = sql.encode(self.encoding)
         # pyodbc uses '?' instead of '%s' as parameter placeholder.
         if n_params is not None:
             sql = sql % tuple('?' * n_params)
@@ -303,13 +303,13 @@ class CursorWrapper(object):
             if isinstance(p, text_type):
                 if self.driver_needs_utf8:
                     # FreeTDS (and other ODBC drivers?) doesn't support Unicode
-                    # yet, so we need to encode parameters in utf-8
-                    fp.append(p.encode('utf-8'))
+                    # yet, so we need to encode parameters
+                    fp.append(p.encode(self.encoding))
                 else:
                     fp.append(p)
             elif isinstance(p, binary_type):
                 if self.driver_needs_utf8:
-                    fp.append(p.decode(self.encoding).encode('utf-8'))
+                    fp.append(p.decode(self.encoding).encode(self.encoding))
                 else:
                     fp.append(p)
             elif isinstance(p, type(True)):
@@ -364,7 +364,7 @@ class CursorWrapper(object):
         if not (needs_utc or self.driver_needs_utf8):
             return tuple(rows)
         # FreeTDS (and other ODBC drivers?) don't support Unicode yet, so we
-        # need to decode UTF-8 data coming from the DB
+        # need to decode data coming from the DB
         fr = []
         for row in rows:
             if self.driver_needs_utf8 and isinstance(row, binary_type):
