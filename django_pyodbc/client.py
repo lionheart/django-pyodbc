@@ -32,7 +32,7 @@ class DatabaseClient(BaseDatabaseClient):
             if defaults_file:
                 args += ["-i", defaults_file]
         else:
-            dsn = settings_dict['OPTIONS'].get('dsn', settings_dict['ODBC_DSN'])
+            dsn = settings_dict['OPTIONS'].get('dsn', settings_dict.get('ODBC_DSN'))
             args = ['%s -v %s %s %s' % (self.executable_name, dsn, user, password)]
 
         # XXX: This works only with Python >= 2.4 because subprocess was added

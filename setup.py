@@ -22,6 +22,6 @@ setup(
         'django_pyodbc.management.commands'
     ],
     install_requires=[
-        'pyodbc==3.0.6',
+        'pyodbc>=3.0.6,<3.1',
     ]
 )

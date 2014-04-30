@@ -5,6 +5,7 @@ import datetime
 import os
 import re
 import sys
+import warnings
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -26,13 +27,17 @@ from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDa
 from django.db.backends.signals import connection_created
 from django.conf import settings
 from django import VERSION as DjangoVersion
-if DjangoVersion[:2] >= (1,5):
+if DjangoVersion[:2] == (1, 7):
+    _DJANGO_VERSION = 17
+elif DjangoVersion[:2] == (1, 6):
+    _DJANGO_VERSION = 16
+elif DjangoVersion[:2] == (1, 5):
     _DJANGO_VERSION = 15
-elif DjangoVersion[:2] == (1,4):
+elif DjangoVersion[:2] == (1, 4):
     _DJANGO_VERSION = 14
-elif DjangoVersion[:2] == (1,3):
+elif DjangoVersion[:2] == (1, 3):
     _DJANGO_VERSION = 13
-elif DjangoVersion[:2] == (1,2):
+elif DjangoVersion[:2] == (1, 2):
     _DJANGO_VERSION = 12
 else:
     raise ImproperlyConfigured("Django %d.%d is not supported." % DjangoVersion[:2])
@@ -54,6 +59,17 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     supports_subqueries_in_group_by = False
     supports_transactions = True
     #uses_savepoints = True
+    allow_sliced_subqueries = False
+    supports_paramstyle_pyformat = False
+
+    #has_bulk_insert = False
+    # DateTimeField doesn't support timezones, only DateTimeOffsetField
+    supports_timezones = False
+    supports_sequence_reset = False    
+    supports_tablespaces = True
+    ignores_nulls_in_unique_constraints = False
+    can_introspect_autofield = True
+
 
     def _supports_transactions(self):
         # keep it compatible with Django 1.3 and 1.4
@@ -62,10 +78,11 @@ class DatabaseFeatures(BaseDatabaseFeatures):
 class DatabaseWrapper(BaseDatabaseWrapper):
     _DJANGO_VERSION = _DJANGO_VERSION
     drv_name = None
-    driver_needs_utf8 = None
+    driver_supports_utf8 = None
     MARS_Connection = False
     unicode_results = False
     datefirst = 7
+    Database = Database
 
     # Collations:       http://msdn2.microsoft.com/en-us/library/ms184391.aspx
     #                   http://msdn2.microsoft.com/en-us/library/ms179886.aspx
@@ -111,7 +128,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             self.datefirst = options.get('datefirst', 7)
             self.unicode_results = options.get('unicode_results', False)
             self.encoding = options.get('encoding', 'utf-8')
-            
+            self.driver_supports_utf8 = options.get('driver_supports_utf8', None)
+
             # make lookup operators to be collation-sensitive if needed
             self.collation = options.get('collation', None)
             if self.collation:
@@ -137,11 +155,41 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
         self.connection = None
 
-    def _cursor(self):
-        new_conn = False
+    def get_connection_params(self):
+        settings_dict = self.settings_dict
+        if not settings_dict['NAME']:
+            from django.core.exceptions import ImproperlyConfigured
+            raise ImproperlyConfigured(
+                "settings.DATABASES is improperly configured. "
+                "Please supply the NAME value.")
+        conn_params = {
+            'database': settings_dict['NAME'],
+        }
+        conn_params.update(settings_dict['OPTIONS'])
+        if 'autocommit' in conn_params:
+            del conn_params['autocommit']
+        if settings_dict['USER']:
+            conn_params['user'] = settings_dict['USER']
+        if settings_dict['PASSWORD']:
+            conn_params['password'] = settings_dict['PASSWORD']
+        if settings_dict['HOST']:
+            conn_params['host'] = settings_dict['HOST']
+        if settings_dict['PORT']:
+            conn_params['port'] = settings_dict['PORT']
+        return conn_params
+
+    def get_new_connection(self, conn_params):
+        return Database.connect(**conn_params)
+
+    def init_connection_state(self):
+        pass
+
+    def _set_autocommit(self, autocommit):
+        pass
+
+    def _get_connection_string(self):
         settings_dict = self.settings_dict
         db_str, user_str, passwd_str, port_str = None, None, "", None
-
         options = settings_dict['OPTIONS']
         if settings_dict['NAME']:
             db_str = settings_dict['NAME']
@@ -156,58 +204,74 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         if settings_dict['PORT']:
             port_str = settings_dict['PORT']
 
-        if self.connection is None:
-            new_conn = True
-            if not db_str:
-                raise ImproperlyConfigured('You need to specify NAME in your Django settings file.')
+        if not db_str:
+            raise ImproperlyConfigured('You need to specify NAME in your Django settings file.')
 
-            cstr_parts = []
-            if 'driver' in options:
-                driver = options['driver']
+        cstr_parts = []
+        if 'driver' in options:
+            driver = options['driver']
+        else:
+            if os.name == 'nt':
+                driver = 'SQL Server'
             else:
-                if os.name == 'nt':
-                    driver = 'SQL Server'
-                else:
-                    driver = 'FreeTDS'
+                driver = 'FreeTDS'
 
-            # Microsoft driver names assumed here are:
-            # * SQL Server
-            # * SQL Native Client
-            # * SQL Server Native Client 10.0/11.0
-            # * ODBC Driver 11 for SQL Server
-            ms_drivers = re.compile('.*SQL (Server$|(Server )?Native Client)')
+        if driver == 'FreeTDS' or driver.endswith('/libtdsodbc.so'):
+            driver_is_freetds = True
+        else:
+            driver_is_freetds = False
 
-            if 'dsn' in options:
-                cstr_parts.append('DSN=%s' % options['dsn'])
+        # Microsoft driver names assumed here are:
+        # * SQL Server
+        # * SQL Native Client
+        # * SQL Server Native Client 10.0/11.0
+        # * ODBC Driver 11 for SQL Server
+        ms_drivers = re.compile('.*SQL (Server$|(Server )?Native Client)')
+
+        if 'dsn' in options:
+            cstr_parts.append('DSN=%s' % options['dsn'])
+        else:
+            # Only append DRIVER if DATABASE_ODBC_DSN hasn't been set
+            if os.path.isabs(driver):
+                cstr_parts.append('DRIVER=%s' % driver)
             else:
-                # Only append DRIVER if DATABASE_ODBC_DSN hasn't been set
                 cstr_parts.append('DRIVER={%s}' % driver)
 
-                if ms_drivers.match(driver) or driver == 'FreeTDS' and \
-                        options.get('host_is_server', False):
-                    if port_str:
-                        host_str += ';PORT=%s' % port_str
-                    cstr_parts.append('SERVER=%s' % host_str)
-                else:
-                    cstr_parts.append('SERVERNAME=%s' % host_str)
-
-            if user_str:
-                cstr_parts.append('UID=%s;PWD=%s' % (user_str, passwd_str))
+            if ms_drivers.match(driver) or driver_is_freetds and \
+                    options.get('host_is_server', False):
+                if port_str:
+                    host_str += ';PORT=%s' % port_str
+                cstr_parts.append('SERVER=%s' % host_str)
             else:
-                if ms_drivers.match(driver):
-                    cstr_parts.append('Trusted_Connection=yes')
-                else:
-                    cstr_parts.append('Integrated Security=SSPI')
+                cstr_parts.append('SERVERNAME=%s' % host_str)
 
-            cstr_parts.append('DATABASE=%s' % db_str)
+        if user_str:
+            cstr_parts.append('UID=%s;PWD=%s' % (user_str, passwd_str))
+        else:
+            if ms_drivers.match(driver):
+                cstr_parts.append('Trusted_Connection=yes')
+            else:
+                cstr_parts.append('Integrated Security=SSPI')
 
-            if self.MARS_Connection:
-                cstr_parts.append('MARS_Connection=yes')
+        cstr_parts.append('DATABASE=%s' % db_str)
 
-            if 'extra_params' in options:
-                cstr_parts.append(options['extra_params'])
+        if self.MARS_Connection:
+            cstr_parts.append('MARS_Connection=yes')
 
-            connstr = ';'.join(cstr_parts)
+        if 'extra_params' in options:
+            cstr_parts.append(options['extra_params'])
+        connectionstring = ';'.join(cstr_parts)
+        return connectionstring
+
+    def _cursor(self):
+        new_conn = False
+        settings_dict = self.settings_dict
+
+
+        if self.connection is None:
+            new_conn = True
+            connstr = self._get_connection_string()#';'.join(cstr_parts)
+            options = settings_dict['OPTIONS']
             autocommit = options.get('autocommit', False)
             if self.unicode_results:
                 self.connection = Database.connect(connstr, \
@@ -230,25 +294,39 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 self.features.can_return_id_from_insert = False
 
             ms_sqlncli = re.compile('^((LIB)?SQLN?CLI|LIBMSODBCSQL)')
-            if self.driver_needs_utf8 is None:
-                self.driver_needs_utf8 = True
-                self.drv_name = self.connection.getinfo(Database.SQL_DRIVER_NAME).upper()
-                if self.drv_name == 'SQLSRV32.DLL' or ms_sqlncli.match(self.drv_name):
-                    self.driver_needs_utf8 = False
+            self.drv_name = self.connection.getinfo(Database.SQL_DRIVER_NAME).upper()
 
-                # http://msdn.microsoft.com/en-us/library/ms131686.aspx
-                if self.ops.sql_server_ver >= 2005 and ms_sqlncli.match(self.drv_name) and self.MARS_Connection:
-                    # How to to activate it: Add 'MARS_Connection': True
-                    # to the DATABASE_OPTIONS dictionary setting
-                    self.features.can_use_chunked_reads = True
+            # http://msdn.microsoft.com/en-us/library/ms131686.aspx
+            if self.ops.sql_server_ver >= 2005 and ms_sqlncli.match(self.drv_name) and self.MARS_Connection:
+                # How to to activate it: Add 'MARS_Connection': True
+                # to the DATABASE_OPTIONS dictionary setting
+                self.features.can_use_chunked_reads = True
 
-            # FreeTDS can't execute some sql queries like CREATE DATABASE etc.
-            # in multi-statement, so we need to commit the above SQL sentence(s)
-            # to avoid this
-            if self.drv_name.startswith('LIBTDSODBC') and not self.connection.autocommit:
-                self.connection.commit()
+            if self.drv_name.startswith('LIBTDSODBC'):
+                # FreeTDS can't execute some sql queries like CREATE DATABASE etc.
+                # in multi-statement, so we need to commit the above SQL sentence(s)
+                # to avoid this
+                if not self.connection.autocommit:
+                    self.connection.commit()
 
-        return CursorWrapper(cursor, self.driver_needs_utf8, self.encoding)
+                freetds_version = self.connection.getinfo(Database.SQL_DRIVER_VER)
+                if self.driver_supports_utf8 is None:
+                    try:
+                        from distutils.version import LooseVersion
+                    except ImportError:
+                        warnings.warn(Warning('Using naive FreeTDS version detection. Install distutils to get better version detection.'))
+                        self.driver_supports_utf8 = not freetds_version.startswith('0.82')
+                    else:
+                        # This is the minimum version that properly supports
+                        # Unicode. Though it started in version 0.82, the
+                        # implementation in that version was buggy.
+                        self.driver_supports_utf8 = LooseVersion(freetds_version) >= LooseVersion('0.91')
+
+            elif self.driver_supports_utf8 is None:
+                self.driver_supports_utf8 = (self.drv_name == 'SQLSRV32.DLL'
+                                             or ms_sqlncli.match(self.drv_name))
+
+        return CursorWrapper(cursor, self.driver_supports_utf8, self.encoding)
 
     def _execute_foreach(self, sql, table_names=None):
         cursor = self.cursor()
@@ -277,21 +355,25 @@ class CursorWrapper(object):
     A wrapper around the pyodbc's cursor that takes in account a) some pyodbc
     DB-API 2.0 implementation and b) some common ODBC driver particularities.
     """
-    def __init__(self, cursor, driver_needs_utf8, encoding=""):
+    def __init__(self, cursor, driver_supports_utf8, encoding=""):
         self.cursor = cursor
-        self.driver_needs_utf8 = driver_needs_utf8
+        self.driver_supports_utf8 = driver_supports_utf8
         self.last_sql = ''
         self.last_params = ()
         self.encoding = encoding
 
     def format_sql(self, sql, n_params=None):
-        if self.driver_needs_utf8 and isinstance(sql, text_type):
-            # FreeTDS (and other ODBC drivers?) don't support Unicode yet, so
+        if not self.driver_supports_utf8 and isinstance(sql, text_type):
+            # Older FreeTDS (and other ODBC drivers?) don't support Unicode yet, so
             # we need to encode the SQL clause itself
             sql = sql.encode(self.encoding)
         # pyodbc uses '?' instead of '%s' as parameter placeholder.
         if n_params is not None:
-            sql = sql % tuple('?' * n_params)
+            try:
+                sql = sql % tuple('?' * n_params)
+            except:
+                #Todo checkout whats happening here
+                pass
         else:
             if '%s' in sql:
                 sql = sql.replace('%s', '?')
@@ -301,14 +383,14 @@ class CursorWrapper(object):
         fp = []
         for p in params:
             if isinstance(p, text_type):
-                if self.driver_needs_utf8:
-                    # FreeTDS (and other ODBC drivers?) doesn't support Unicode
-                    # yet, so we need to encode parameters
+                if not self.driver_supports_utf8:
+                    # Older FreeTDS (and other ODBC drivers?) doesn't support Unicode
+                    # yet, so we need to encode parameters in utf-8
                     fp.append(p.encode(self.encoding))
                 else:
                     fp.append(p)
             elif isinstance(p, binary_type):
-                if self.driver_needs_utf8:
+                if not self.driver_supports_utf8:
                     fp.append(p.decode(self.encoding).encode(self.encoding))
                 else:
                     fp.append(p)
@@ -326,7 +408,6 @@ class CursorWrapper(object):
         sql = self.format_sql(sql, len(params))
         params = self.format_params(params)
         self.last_params = params
-
         try:
             return self.cursor.execute(sql, params)
         except IntegrityError:
@@ -361,13 +442,13 @@ class CursorWrapper(object):
         (pyodbc Rows are not sliceable).
         """
         needs_utc = _DJANGO_VERSION >= 14 and settings.USE_TZ
-        if not (needs_utc or self.driver_needs_utf8):
+        if not (needs_utc or not self.driver_supports_utf8):
             return tuple(rows)
         # FreeTDS (and other ODBC drivers?) don't support Unicode yet, so we
         # need to decode data coming from the DB
         fr = []
         for row in rows:
-            if self.driver_needs_utf8 and isinstance(row, binary_type):
+            if not self.driver_supports_utf8 and isinstance(row, binary_type):
                 row = row.decode(self.encoding)
 
             elif needs_utc and isinstance(row, datetime.datetime):
@@ -394,3 +475,16 @@ class CursorWrapper(object):
 
     def __iter__(self):
         return iter(self.cursor)
+
+
+    # # MS SQL Server doesn't support explicit savepoint commits; savepoints are
+    # # implicitly committed with the transaction.
+    # # Ignore them.
+    def savepoint_commit(self, sid):
+        # if something is populating self.queries, include a fake entry to avoid
+        # issues with tests that use assertNumQueries.
+        if self.queries:
+            self.queries.append({
+                'sql': '-- RELEASE SAVEPOINT %s -- (because assertNumQueries)' % self.ops.quote_name(sid),
+                'time': '0.000',
+            })
