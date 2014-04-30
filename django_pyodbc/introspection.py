@@ -1,11 +1,11 @@
 from django.db.backends import BaseDatabaseIntrospection
-import pyodbc as Database
+import pytds as Database
 
 SQL_AUTOFIELD = -777555
 
 class DatabaseIntrospection(BaseDatabaseIntrospection):
     # Map type codes to Django Field types.
-    data_types_reverse = {
+    '''data_types_reverse = {
         SQL_AUTOFIELD:                  'IntegerField',
         Database.SQL_BIGINT:            'BigIntegerField',
         Database.SQL_BINARY:            'BinaryField',
@@ -30,6 +30,26 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         Database.SQL_WCHAR:             'CharField',
         Database.SQL_WLONGVARCHAR:      'TextField',
         Database.SQL_WVARCHAR:          'TextField',
+    }'''
+
+    data_types_reverse = {
+        'AUTO_FIELD_MARKER': 'AutoField',
+        Database.SYBBIT: 'BooleanField',
+        Database.XSYBCHAR: 'CharField',
+        Database.XSYBNCHAR: 'CharField',
+        Database.SYBDECIMAL: 'DecimalField',
+        Database.SYBNUMERIC: 'DecimalField',
+        #pytds.adDBTimeStamp: 'DateTimeField',
+        Database.SYBREAL: 'FloatField',
+        Database.SYBFLT8: 'FloatField',
+        Database.SYBINT4: 'IntegerField',
+        Database.SYBINT8: 'BigIntegerField',
+        Database.SYBINT2: 'IntegerField',
+        Database.SYBINT1: 'IntegerField',
+        Database.XSYBVARCHAR: 'CharField',
+        Database.XSYBNVARCHAR: 'CharField',
+        Database.SYBTEXT: 'TextField',
+        Database.SYBNTEXT: 'TextField',
     }
 
     def get_table_list(self, cursor):
@@ -79,8 +99,8 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
             # The conversion from TextField to CharField below is unwise.
             #   A SQLServer db field of type "Text" is not interchangeable with a CharField, no matter how short its max_length.
             #   For example, model.objects.values(<text_field_name>).count() will fail on a sqlserver 'text' field
-            if column[1] == Database.SQL_WVARCHAR and column[3] < 4000:
-                column[1] = Database.SQL_WCHAR
+            '''if column[1] == Database.SQL_WVARCHAR and column[3] < 4000:
+                column[1] = Database.SQL_WCHAR'''
             items.append(column)
         return items
 
