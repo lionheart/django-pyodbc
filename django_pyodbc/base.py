@@ -65,7 +65,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     #has_bulk_insert = False
     # DateTimeField doesn't support timezones, only DateTimeOffsetField
     supports_timezones = False
-    supports_sequence_reset = False    
+    supports_sequence_reset = False
     supports_tablespaces = True
     ignores_nulls_in_unique_constraints = False
     can_introspect_autofield = True
@@ -129,6 +129,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             self.unicode_results = options.get('unicode_results', False)
             self.encoding = options.get('encoding', 'utf-8')
             self.driver_supports_utf8 = options.get('driver_supports_utf8', None)
+            self.driver_needs_utf8 = options.get('driver_needs_utf8', None)
 
             # make lookup operators to be collation-sensitive if needed
             self.collation = options.get('collation', None)
