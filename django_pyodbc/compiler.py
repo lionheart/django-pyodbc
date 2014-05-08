@@ -186,6 +186,9 @@ class SQLCompiler(compiler.SQLCompiler):
         if self.query.high_mark:
             where_row_num += ' and _row_num <= {0}'.format(self.query.high_mark)        
         
+        # SQL Server 2000 doesn't support the `ROW_NUMBER()` function, thus it
+        # is necessary to use the `TOP` construct with `ORDER BY` so we can
+        # slice out a particular range of results.
         if self.connection.ops.sql_server_ver < 2005:
             num_to_select = self.query.high_mark - self.query.low_mark
             order_by_col_with_prefix,order_direction = order.rsplit(' ',1)
