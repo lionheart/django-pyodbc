@@ -185,13 +185,52 @@ class SQLCompiler(compiler.SQLCompiler):
         where_row_num = '{0} < _row_num'.format(self.query.low_mark)
         if self.query.high_mark:
             where_row_num += ' and _row_num <= {0}'.format(self.query.high_mark)        
-            
-        sql = "SELECT _row_num, {outer} FROM ( SELECT ROW_NUMBER() OVER ( ORDER BY {order}) as _row_num, {inner}) as QQQ where {where}".format(
-            outer=outer_fields,
-            order=order,
-            inner=inner_select,
-            where=where_row_num,
-        )
+        
+        if self.connection.ops.sql_server_ver < 2005:
+            num_to_select = self.query.high_mark - self.query.low_mark
+            order_by_col_with_prefix,order_direction = order.rsplit(' ',1)
+            order_by_col = order_by_col_with_prefix.rsplit('.',1)[-1]
+            opposite_order_direction = REV_ODIR[order_direction]
+            sql = r'''
+                SELECT 
+                1, -- placeholder for _row_num
+                * FROM
+                (
+                    SELECT TOP
+                    -- num_to_select
+                    {num_to_select}
+                    *
+                    FROM
+                    (
+                        SELECT TOP 
+                        -- high_mark
+                        {high_mark}
+                        -- inner
+                        {inner}
+                        ORDER BY (
+                        -- order_by_col
+                        [AAAA].{order_by_col}
+                        ) 
+                        -- order_direction
+                        {order_direction}
+                    ) AS BBBB ORDER BY ([BBBB].{order_by_col}) {opposite_order_direction}
+                ) AS QQQQ ORDER BY ([QQQQ].{order_by_col}) {order_direction}
+                '''.format(
+                    inner=inner_select,
+                    num_to_select=num_to_select,
+                    high_mark=self.query.high_mark,
+                    order_by_col=order_by_col,
+                    order_direction=order_direction,
+                    opposite_order_direction=opposite_order_direction
+                )
+        else:
+            sql = "SELECT _row_num, {outer} FROM ( SELECT ROW_NUMBER() OVER ( ORDER BY {order}) as _row_num, {inner}) as QQQ where {where}".format(
+                outer=outer_fields,
+                order=order,
+                inner=inner_select,
+                where=where_row_num,
+            )
+        
         
         return sql, fields
 
