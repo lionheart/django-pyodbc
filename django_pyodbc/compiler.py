@@ -322,6 +322,18 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
         if not hasattr(self, 'return_id'):
             self.return_id = False
 
+        # [msbrogli 2014-03-20] Remove primary key AutoField fields with value None.
+        # STARTS HERE
+        from django.db import models
+        has_fields = bool(self.query.fields)
+        fields = self.query.fields if has_fields else [opts.pk]
+        fields = [
+                  f for f in fields
+                  if not (f.primary_key and isinstance(f, models.AutoField) and getattr(self.query.objs[0], f.attname) is None)
+                 ]
+        self.query.fields = fields
+        # ENDS HERE
+
         result = super(SQLInsertCompiler, self).as_sql(*args, **kwargs)
         if isinstance(result, list):
             # Django 1.4 wraps return in list
@@ -444,10 +456,12 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
         # [msbrogli 2014-03-20] Remove primary key AutoField fields with value None.
         # STARTS HERE
         from django.db import models
+        print '@@ ANTES', fields
         fields = [
                   f for f in fields
                   if not (f.primary_key and isinstance(f, models.AutoField) and getattr(self.query.objs[0], f.attname) is None)
                  ]
+        print '@@ DEPOIS', fields
         # ENDS HERE
         columns = [f.column for f in fields]
 
