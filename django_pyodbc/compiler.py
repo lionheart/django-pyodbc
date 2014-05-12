@@ -142,11 +142,13 @@ class SQLCompiler(compiler.SQLCompiler):
         
         # Check for high mark only and replace with "TOP"
         if self.query.high_mark is not None and not self.query.low_mark:
-            _select = 'SELECT'
-            if self.query.distinct:
-                _select += ' DISTINCT'
-            
-            sql = re.sub(r'(?i)^{0}'.format(_select), '{0} TOP {1}'.format(_select, self.query.high_mark), raw_sql, 1)
+            if self.connection.ops.is_db2:
+                sql = self._select_top('',raw_sql,self.query.high_mark)
+            else:
+                _select = 'SELECT'
+                if self.query.distinct:
+                    _select += ' DISTINCT'
+                sql = re.sub(r'(?i)^{0}'.format(_select), '{0} TOP {1}'.format(_select, self.query.high_mark), raw_sql, 1)
             return sql, fields
             
         # Else we have limits; rewrite the query using ROW_NUMBER()
@@ -212,19 +214,21 @@ class SQLCompiler(compiler.SQLCompiler):
                         {inner}
                         ORDER BY (
                         -- order_by_col
-                        [AAAA].{order_by_col}
+                        {left_sql_quote}AAAA{right_sql_quote}.{order_by_col}
                         ) 
                         -- order_direction
                         {order_direction}
-                    ) AS BBBB ORDER BY ([BBBB].{order_by_col}) {opposite_order_direction}
-                ) AS QQQQ ORDER BY ([QQQQ].{order_by_col}) {order_direction}
+                    ) AS BBBB ORDER BY ({left_sql_quote}BBBB{right_sql_quote}.{order_by_col}) {opposite_order_direction}
+                ) AS QQQQ ORDER BY ({left_sql_quote}QQQQ{right_sql_quote}.{order_by_col}) {order_direction}
                 '''.format(
                     inner=inner_select,
                     num_to_select=num_to_select,
                     high_mark=self.query.high_mark,
                     order_by_col=order_by_col,
                     order_direction=order_direction,
-                    opposite_order_direction=opposite_order_direction
+                    opposite_order_direction=opposite_order_direction,
+                    left_sql_quote=self.connection.ops.left_sql_quote,
+                    right_sql_quote=self.connection.ops.right_sql_quote,
                 )
         else:
             sql = "SELECT _row_num, {outer} FROM ( SELECT ROW_NUMBER() OVER ( ORDER BY {order}) as _row_num, {inner}) as QQQ where {where}".format(
@@ -236,6 +240,14 @@ class SQLCompiler(compiler.SQLCompiler):
         
         
         return sql, fields
+        
+    def _select_top(self,select,inner_sql,number_to_fetch):
+        if self.connection.ops.is_db2:
+            return "{select} {inner_sql} FETCH FIRST {number_to_fetch} ROWS ONLY".format(
+                select=select,inner_sql=inner_sql,number_to_fetch=number_to_fetch)
+        else:
+            return "{select} TOP {number_to_fetch} {inner_sql}".format(
+                select=select,inner_sql=inner_sql,number_to_fetch=number_to_fetch)
 
     def _fix_slicing_order(self, outer_fields, inner_select, order, inner_table_name):
         """
@@ -274,9 +286,11 @@ class SQLCompiler(compiler.SQLCompiler):
                     # Ordering requires the column to be selected by the inner select
                     alias_id += 1
                     # alias column name
-                    col = '[{0}___o{1}]'.format(
-                        col.strip('[]'),
+                    col = '{left_sql_quote}{0}___o{1}{right_sql_quote'.format(
+                        col.strip(self.left_sql_quote+self.right_sql_quote),
                         alias_id,
+                        left_sql_quote=self.left_sql_quote,
+                        right_sql_quote=self.right_sql_quote,
                     )
                     # add alias to inner_select
                     inner_select = '({0}) AS {1}, {2}'.format(x, col, inner_select)
@@ -319,7 +333,7 @@ class SQLCompiler(compiler.SQLCompiler):
     
         temp_sql = ''.join(paren_buf)
     
-        select_list, from_clause = _break(temp_sql, ' FROM [')
+        select_list, from_clause = _break(temp_sql, ' FROM '+self.right_sql_quote)
             
         for col in [x.strip() for x in select_list.split(',')]:
             match = _re_pat_col.search(col)

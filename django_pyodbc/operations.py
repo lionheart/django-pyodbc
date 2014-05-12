@@ -20,6 +20,35 @@ class DatabaseOperations(BaseDatabaseOperations):
         self.connection = connection
         self._ss_ver = None
         self._ss_edition = None
+        self._is_db2 = None
+        self._left_sql_quote = '['
+        self._right_sql_quote = ']'
+        
+    def _get_is_db2(self):
+        if self._is_db2 is None:
+            cur = self.connection.cursor()
+            try:
+                cur.execute("SELECT * FROM SYSIBM.COLUMNS FETCH FIRST 1 ROWS ONLY")
+                self._is_db2 = True
+                self._left_sql_quote = '{'
+                self._right_sql_quote = '}'
+                
+            except Exception:
+                self._is_db2 = False
+        return self._is_db2
+    is_db2 = property(_get_is_db2)
+    
+    def _get_left_sql_quote(self):
+        if self._is_db2 is None:
+            self._get_is_db2()
+        return self._left_sql_quote
+    left_sql_quote = property(_get_left_sql_quote)
+    
+    def _get_right_sql_quote(self):
+        if self._is_db2 is None:
+            self._get_is_db2()
+        return self._right_sql_quote
+    right_sql_quote = property(_get_right_sql_quote)
 
     def _get_sql_server_ver(self):
         """
@@ -28,9 +57,11 @@ class DatabaseOperations(BaseDatabaseOperations):
         if self._ss_ver is not None:
             return self._ss_ver
         cur = self.connection.cursor()
-        cur.execute("SELECT CAST(SERVERPROPERTY('ProductVersion') as varchar)")
-        ver_code = cur.fetchone()[0]
-        ver_code = int(ver_code.split('.')[0])
+        ver_code = None
+        if not self.is_db2:
+            cur.execute("SELECT CAST(SERVERPROPERTY('ProductVersion') as varchar)")
+            ver_code = cur.fetchone()[0]
+            ver_code = int(ver_code.split('.')[0])
         if ver_code >= 11:
             self._ss_ver = 2012
         elif ver_code == 10:
@@ -180,9 +211,9 @@ class DatabaseOperations(BaseDatabaseOperations):
         Returns a quoted version of the given table, index or column name. Does
         not quote the given name if it's already been quoted.
         """
-        if name.startswith('[') and name.endswith(']'):
+        if name.startswith(self.left_sql_quote) and name.endswith(self.right_sql_quote):
             return name # Quoting once is enough.
-        return '[%s]' % name
+        return '%s%s%s' % (self.left_sql_quote,name,self.right_sql_quote)
 
     def random_function_sql(self):
         """
