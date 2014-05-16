@@ -6,9 +6,9 @@ SQL_AUTOFIELD = -777555
 class DatabaseIntrospection(BaseDatabaseIntrospection):
     # Map type codes to Django Field types.
     data_types_reverse = {
-        SQL_AUTOFIELD:                  'AutoField',
+        SQL_AUTOFIELD:                  'IntegerField',
         Database.SQL_BIGINT:            'BigIntegerField',
-        #Database.SQL_BINARY:            ,
+        Database.SQL_BINARY:            'BinaryField',
         Database.SQL_BIT:               'NullBooleanField',
         Database.SQL_CHAR:              'CharField',
         Database.SQL_DECIMAL:           'DecimalField',
@@ -16,7 +16,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         Database.SQL_FLOAT:             'FloatField',
         Database.SQL_GUID:              'TextField',
         Database.SQL_INTEGER:           'IntegerField',
-        #Database.SQL_LONGVARBINARY:     ,
+        Database.SQL_LONGVARBINARY:     'BinaryField',
         #Database.SQL_LONGVARCHAR:       ,
         Database.SQL_NUMERIC:           'DecimalField',
         Database.SQL_REAL:              'FloatField',
@@ -25,7 +25,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         Database.SQL_TYPE_DATE:         'DateField',
         Database.SQL_TYPE_TIME:         'TimeField',
         Database.SQL_TYPE_TIMESTAMP:    'DateTimeField',
-        #Database.SQL_VARBINARY:         ,
+        Database.SQL_VARBINARY:         'BinaryField',
         Database.SQL_VARCHAR:           'TextField',
         Database.SQL_WCHAR:             'CharField',
         Database.SQL_WLONGVARCHAR:      'TextField',
@@ -56,6 +56,8 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         cursor.execute("SELECT COLUMNPROPERTY(OBJECT_ID(%s), %s, 'IsIdentity')",
                          (self.connection.ops.quote_name(table_name), column_name))
         return cursor.fetchall()[0][0]
+
+
 
     def get_table_description(self, cursor, table_name, identity_check=True):
         """Returns a description of the table, with DB-API cursor.description interface.
@@ -119,58 +121,38 @@ WHERE a.TABLE_NAME = %s AND a.CONSTRAINT_TYPE = 'FOREIGN KEY'"""
                      for item in cursor.fetchall()])
 
     def get_indexes(self, cursor, table_name):
+    #    Returns a dictionary of fieldname -> infodict for the given table,
+    #    where each infodict is in the format:
+    #        {'primary_key': boolean representing whether it's the primary key,
+    #         'unique': boolean representing whether it's a unique index}
+        sql = """
+            select
+            C.name as [column_name],
+            IX.is_unique as [unique],
+            IX.is_primary_key as [primary_key]
+            from
+            sys.tables T
+            join sys.index_columns IC on IC.object_id = T.object_id
+            join sys.columns C on C.object_id = T.object_id and C.column_id = IC.column_id
+            join sys.indexes IX on IX.object_id = T.object_id and IX.index_id = IC.index_id
+            where
+            T.name = %s
+            -- Omit multi-column keys
+            and not exists (
+                select *
+                from sys.index_columns cols
+                where
+                    cols.object_id = T.object_id
+                    and cols.index_id = IC.index_id
+                    and cols.key_ordinal > 1
+            )
         """
-        Returns a dictionary of fieldname -> infodict for the given table,
-        where each infodict is in the format:
-            {'primary_key': boolean representing whether it's the primary key,
-             'unique': boolean representing whether it's a unique index,
-             'db_index': boolean representing whether it's a non-unique index}
-        """
-        # CONSTRAINT_COLUMN_USAGE: http://msdn2.microsoft.com/en-us/library/ms174431.aspx
-        # TABLE_CONSTRAINTS: http://msdn2.microsoft.com/en-us/library/ms181757.aspx
+        cursor.execute(sql,[table_name])
+        constraints = cursor.fetchall()
+        indexes = dict()
 
-        pk_uk_sql = """
-SELECT b.COLUMN_NAME, a.CONSTRAINT_TYPE
-FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS a
-INNER JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS b
-  ON a.CONSTRAINT_NAME = b.CONSTRAINT_NAME AND a.TABLE_NAME = b.TABLE_NAME
-WHERE a.TABLE_NAME = %s AND (CONSTRAINT_TYPE = 'PRIMARY KEY' OR CONSTRAINT_TYPE = 'UNIQUE')"""
-
-        field_names = [item[0] for item in self.get_table_description(cursor, table_name, identity_check=False)]
-        indexes, results = {}, {}
-        cursor.execute(pk_uk_sql, (table_name,))
-        data = cursor.fetchall()
-        if data:
-            results.update(data)
-
-        # non-unique, non-compound indexes, only in SS2005?
-        ix_sql = """
-SELECT DISTINCT c.name
-FROM sys.columns c
-INNER JOIN sys.index_columns ic
-  ON ic.object_id = c.object_id AND ic.column_id = c.column_id
-INNER JOIN sys.indexes ix
-  ON ix.object_id = ic.object_id AND ix.index_id = ic.index_id
-INNER JOIN sys.tables t
-  ON t.object_id = ix.object_id
-WHERE ix.object_id IN (
-  SELECT ix.object_id
-  FROM sys.indexes ix
-  GROUP BY ix.object_id, ix.index_id
-  HAVING count(1) = 1)
-AND ix.is_primary_key = 0
-AND ix.is_unique_constraint = 0
-AND t.name = %s"""
-
-        if self.connection.ops.sql_server_ver >= 2005:
-            cursor.execute(ix_sql, (table_name,))
-            for column in [r[0] for r in cursor.fetchall()]:
-                if column not in results:
-                    results[column] = 'IX'
-
-        for field in field_names:
-            val = results.get(field, None)
-            indexes[field] = dict(primary_key=(val=='PRIMARY KEY'), unique=(val=='UNIQUE'), db_index=(val=='IX'))
+        for column_name, unique, primary_key in constraints:
+            indexes[column_name.lower()] = {"primary_key":primary_key, "unique":unique}
 
         return indexes
 
@@ -183,3 +165,44 @@ AND t.name = %s"""
     #
     #    cursor.execute("SELECT name, description FROM ::fn_helpcollations()")
     #    return [tuple(row) for row in cursor.fetchall()]
+
+    def get_key_columns(self, cursor, table_name):
+        """
+        Backends can override this to return a list of (column_name, referenced_table_name,
+        referenced_column_name) for all key columns in given table.
+        """
+        source_field_dict = self._name_to_index(cursor, table_name)
+
+        sql = """
+select
+    COLUMN_NAME = fk_cols.COLUMN_NAME,
+    REFERENCED_TABLE_NAME = pk.TABLE_NAME,
+    REFERENCED_COLUMN_NAME = pk_cols.COLUMN_NAME
+from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ref_const
+join INFORMATION_SCHEMA.TABLE_CONSTRAINTS fk
+    on ref_const.CONSTRAINT_CATALOG = fk.CONSTRAINT_CATALOG
+    and ref_const.CONSTRAINT_SCHEMA = fk.CONSTRAINT_SCHEMA
+    and ref_const.CONSTRAINT_NAME = fk.CONSTRAINT_NAME
+    and fk.CONSTRAINT_TYPE = 'FOREIGN KEY'
+
+join INFORMATION_SCHEMA.TABLE_CONSTRAINTS pk
+    on ref_const.UNIQUE_CONSTRAINT_CATALOG = pk.CONSTRAINT_CATALOG
+    and ref_const.UNIQUE_CONSTRAINT_SCHEMA = pk.CONSTRAINT_SCHEMA
+    and ref_const.UNIQUE_CONSTRAINT_NAME = pk.CONSTRAINT_NAME
+    And pk.CONSTRAINT_TYPE = 'PRIMARY KEY'
+
+join INFORMATION_SCHEMA.KEY_COLUMN_USAGE fk_cols
+    on ref_const.CONSTRAINT_NAME = fk_cols.CONSTRAINT_NAME
+
+join INFORMATION_SCHEMA.KEY_COLUMN_USAGE pk_cols
+    on pk.CONSTRAINT_NAME = pk_cols.CONSTRAINT_NAME
+where
+    fk.TABLE_NAME = %s"""
+
+        cursor.execute(sql,[table_name])
+        relations = cursor.fetchall()
+
+        key_columns = []
+        key_columns.extend([(source_column, target_table, target_column) \
+            for source_column, target_table, target_column in relations])
+        return key_columns

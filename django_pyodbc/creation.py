@@ -26,30 +26,37 @@ class DatabaseCreation(BaseDatabaseCreation):
     # output (the "qn_" prefix is stripped before the lookup is performed.
 
     data_types = DataTypesWrapper({
-    #data_types = {
-        'AutoField':         'int IDENTITY (1, 1)',
-        'BigIntegerField':   'bigint',
-        'BooleanField':      'bit',
-        'CharField':         'nvarchar(%(max_length)s)',
-        'CommaSeparatedIntegerField': 'nvarchar(%(max_length)s)',
-        'DateField':         'datetime',
-        'DateTimeField':     'datetime',
-        'DecimalField':      'numeric(%(max_digits)s, %(decimal_places)s)',
-        'FileField':         'nvarchar(%(max_length)s)',
-        'FilePathField':     'nvarchar(%(max_length)s)',
-        'FloatField':        'double precision',
-        'GenericIPAddressField': 'nvarchar(39)',
-        'IntegerField':      'int',
-        'IPAddressField':    'nvarchar(15)',
-        'NullBooleanField':  'bit',
-        'OneToOneField':     'int',
-        #'PositiveIntegerField': 'integer CONSTRAINT [CK_int_pos_%(column)s] CHECK ([%(column)s] >= 0)',
-        #'PositiveSmallIntegerField': 'smallint CONSTRAINT [CK_smallint_pos_%(column)s] CHECK ([%(column)s] >= 0)',
-        'SlugField':         'nvarchar(%(max_length)s)',
-        'SmallIntegerField': 'smallint',
-        'TextField':         'nvarchar(max)',
-        'TimeField':         'datetime',
-    #}
+        'AutoField':                    'int IDENTITY (1, 1)',
+        'BigAutoField':                 'bigint IDENTITY (1, 1)',
+        'BigIntegerField':              'bigint',
+        'BinaryField':                  'varbinary(max)',
+        'BooleanField':                 'bit',
+        'CharField':                    'nvarchar(%(max_length)s)',
+        'CommaSeparatedIntegerField':   'nvarchar(%(max_length)s)',
+        'DateField':                    'date',
+        'DateTimeField':                'datetime',
+        'DateTimeOffsetField':          'datetimeoffset',
+        'DecimalField':                 'decimal(%(max_digits)s, %(decimal_places)s)',
+        'FileField':                    'nvarchar(%(max_length)s)',
+        'FilePathField':                'nvarchar(%(max_length)s)',
+        'FloatField':                   'double precision',
+        'GenericIPAddressField':        'nvarchar(39)',
+        'IntegerField':                 'int',
+        'IPAddressField':               'nvarchar(15)',
+        'LegacyDateField':              'datetime',
+        'LegacyDateTimeField':          'datetime',
+        'LegacyTimeField':              'time',
+        'NewDateField':                 'date',
+        'NewDateTimeField':             'datetime2',
+        'NewTimeField':                 'time',
+        'NullBooleanField':             'bit',
+        'OneToOneField':                'int',
+        'PositiveIntegerField':         'int CHECK ([%(column)s] >= 0)',
+        'PositiveSmallIntegerField':    'smallint CHECK ([%(column)s] >= 0)',
+        'SlugField':                    'nvarchar(%(max_length)s)',
+        'SmallIntegerField':            'smallint',
+        'TextField':                    'nvarchar(max)',
+        'TimeField':                    'time',        
     })
 
     def _create_test_db(self, verbosity, autoclobber):
@@ -63,8 +70,11 @@ class DatabaseCreation(BaseDatabaseCreation):
             else:
                 from django.db.backends.creation import TEST_DATABASE_PREFIX
                 test_name = TEST_DATABASE_PREFIX + settings_dict['NAME']
-        if not settings_dict['TEST_NAME']:
-            settings_dict['TEST_NAME'] = test_name
+        if self.connection._DJANGO_VERSION >= 17:
+            settings_dict['TEST']['NAME'] = test_name
+        else:
+            if not settings_dict['TEST_NAME']:
+                settings_dict['TEST_NAME'] = test_name
 
         if not self.connection.test_create:
             # use the existing database instead of creating a new one
@@ -91,7 +101,6 @@ class DatabaseCreation(BaseDatabaseCreation):
         if self.connection.ops.on_azure_sql_db:
             self.connection.close()
             settings_dict["NAME"] = 'master'
-
         return super(DatabaseCreation, self)._create_test_db(verbosity, autoclobber)
 
     def _destroy_test_db(self, test_database_name, verbosity):
@@ -128,6 +137,10 @@ class DatabaseCreation(BaseDatabaseCreation):
 
     def sql_table_creation_suffix(self):
         suffix = []
-        if self.connection.settings_dict['TEST_COLLATION']:
-            suffix.append('COLLATE %s' % self.connection.settings_dict['TEST_COLLATION'])
+        if self.connection._DJANGO_VERSION >= 17:
+            test_collation = self.connection.settings_dict['TEST']['COLLATION']
+        else:
+            test_collation = self.connection.settings_dict['TEST_COLLATION']
+        if test_collation:
+            suffix.append('COLLATE %s' % test_collation)
         return ' '.join(suffix)
