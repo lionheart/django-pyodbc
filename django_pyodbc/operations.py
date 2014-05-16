@@ -74,12 +74,14 @@ class DatabaseOperations(BaseDatabaseOperations):
         if lookup_type == 'day':
             return "Convert(datetime, Convert(varchar(12), %s, 112))" % field_name
 
-    def field_cast_sql(self, db_type):
+    def field_cast_sql(self, db_type, internal_type=None):
         """
         Given a column type (e.g. 'BLOB', 'VARCHAR'), returns the SQL necessary
         to cast it before using it in a WHERE statement. Note that the
         resulting string should contain a '%s' placeholder for the column being
         searched against.
+
+        TODO: verify that db_type and internal_type do not affect T-SQL CAST statement
         """
         if self.sql_server_ver < 2005 and db_type and db_type.lower() == 'ntext':
             return 'CAST(%s as nvarchar)'
