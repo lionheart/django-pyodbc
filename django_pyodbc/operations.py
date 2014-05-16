@@ -119,6 +119,8 @@ class DatabaseOperations(BaseDatabaseOperations):
         to cast it before using it in a WHERE statement. Note that the
         resulting string should contain a '%s' placeholder for the column being
         searched against.
+
+        TODO: verify that db_type and internal_type do not affect T-SQL CAST statement
         """
         if self.sql_server_ver < 2005 and db_type and db_type.lower() == 'ntext':
             return 'CAST(%s as nvarchar)'
