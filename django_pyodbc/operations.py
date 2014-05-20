@@ -1,6 +1,10 @@
 import datetime
 import decimal
 import time
+try:
+    import pytz
+except:
+    pytz = None
 
 from django.conf import settings
 from django.db.backends import BaseDatabaseOperations
@@ -60,7 +64,6 @@ class DatabaseOperations(BaseDatabaseOperations):
             return "DATEPART(dw, %s)" % field_name
         else:
             return "DATEPART(%s, %s)" % (lookup_type, field_name)
-
 
     def date_trunc_sql(self, lookup_type, field_name):
         return "DATEADD(%s, DATEDIFF(%s, 0, %s), 0)" % (lookup_type, lookup_type, field_name)
