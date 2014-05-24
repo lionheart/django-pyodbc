@@ -468,6 +468,12 @@ class CursorWrapper(object):
     def __iter__(self):
         return iter(self.cursor)
 
+    def close(self):
+        try:
+            self.cursor.close()
+        except Database.ProgrammingError:
+            # cursor already closed
+            pass
 
     # # MS SQL Server doesn't support explicit savepoint commits; savepoints are
     # # implicitly committed with the transaction.
