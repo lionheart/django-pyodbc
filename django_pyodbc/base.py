@@ -194,7 +194,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         return connection
 
     def init_connection_state(self):
-        with self.cursor() as cursor:
+        with self.connection.cursor() as cursor:
             # Set date format for the connection. Also, make sure Sunday is
             # considered the first day of the week (to be consistent with the
             # Django convention for the 'week_day' Django lookup) if the user
@@ -319,6 +319,12 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     def create_cursor(self):
         cursor = self.connection.cursor()
         return CursorWrapper(cursor, self.driver_supports_utf8, self.encoding)
+
+    def _cursor(self):
+        if self.connection is None:
+            self.connection = self.get_new_connection(self.get_connection_params())
+            self.init_connection_state()
+        return self.create_cursor()
 
     def _execute_foreach(self, sql, table_names=None):
         cursor = self.cursor()
