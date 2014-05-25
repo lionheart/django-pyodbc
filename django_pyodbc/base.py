@@ -180,10 +180,62 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         return conn_params
 
     def get_new_connection(self, conn_params):
-        return Database.connect(**conn_params)
+        connstr = self._get_connection_string()#';'.join(cstr_parts)
+        options = self.settings_dict['OPTIONS']
+        autocommit = options.get('autocommit', False)
+        if self.unicode_results:
+            connection = Database.connect(connstr, \
+                                          autocommit=autocommit, \
+                                          unicode_results='True')
+        else:
+            connection = Database.connect(connstr, autocommit=autocommit)
+
+        connection_created.send(sender=self.__class__, connection=self)
+        return connection
 
     def init_connection_state(self):
-        pass
+        with self.connection.cursor() as cursor:
+            # Set date format for the connection. Also, make sure Sunday is
+            # considered the first day of the week (to be consistent with the
+            # Django convention for the 'week_day' Django lookup) if the user
+            # hasn't told us otherwise
+            cursor.execute("SET DATEFORMAT ymd; SET DATEFIRST %s" % self.datefirst)
+            if self.ops.sql_server_ver < 2005:
+                self.creation.data_types['TextField'] = 'ntext'
+                self.features.can_return_id_from_insert = False
+
+            ms_sqlncli = re.compile('^((LIB)?SQLN?CLI|LIBMSODBCSQL)')
+            self.drv_name = self.connection.getinfo(Database.SQL_DRIVER_NAME).upper()
+
+            # http://msdn.microsoft.com/en-us/library/ms131686.aspx
+            if self.ops.sql_server_ver >= 2005 and ms_sqlncli.match(self.drv_name) and self.MARS_Connection:
+                # How to to activate it: Add 'MARS_Connection': True
+                # to the DATABASE_OPTIONS dictionary setting
+                self.features.can_use_chunked_reads = True
+
+            if self.drv_name.startswith('LIBTDSODBC'):
+                # FreeTDS can't execute some sql queries like CREATE DATABASE etc.
+                # in multi-statement, so we need to commit the above SQL sentence(s)
+                # to avoid this
+                if not self.connection.autocommit:
+                    self.connection.commit()
+
+                freetds_version = self.connection.getinfo(Database.SQL_DRIVER_VER)
+                if self.driver_supports_utf8 is None:
+                    try:
+                        from distutils.version import LooseVersion
+                    except ImportError:
+                        warnings.warn(Warning('Using naive FreeTDS version detection. Install distutils to get better version detection.'))
+                        self.driver_supports_utf8 = not freetds_version.startswith('0.82')
+                    else:
+                        # This is the minimum version that properly supports
+                        # Unicode. Though it started in version 0.82, the
+                        # implementation in that version was buggy.
+                        self.driver_supports_utf8 = LooseVersion(freetds_version) >= LooseVersion('0.91')
+
+            elif self.driver_supports_utf8 is None:
+                self.driver_supports_utf8 = (self.drv_name == 'SQLSRV32.DLL'
+                                             or ms_sqlncli.match(self.drv_name))
 
     def _set_autocommit(self, autocommit):
         pass
@@ -264,70 +316,15 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         connectionstring = ';'.join(cstr_parts)
         return connectionstring
 
-    def _cursor(self):
-        new_conn = False
-        settings_dict = self.settings_dict
-
-
-        if self.connection is None:
-            new_conn = True
-            connstr = self._get_connection_string()#';'.join(cstr_parts)
-            options = settings_dict['OPTIONS']
-            autocommit = options.get('autocommit', False)
-            if self.unicode_results:
-                self.connection = Database.connect(connstr, \
-                        autocommit=autocommit, \
-                        unicode_results='True')
-            else:
-                self.connection = Database.connect(connstr, \
-                        autocommit=autocommit)
-            connection_created.send(sender=self.__class__, connection=self)
-
+    def create_cursor(self):
         cursor = self.connection.cursor()
-        if new_conn:
-            # Set date format for the connection. Also, make sure Sunday is
-            # considered the first day of the week (to be consistent with the
-            # Django convention for the 'week_day' Django lookup) if the user
-            # hasn't told us otherwise
-            cursor.execute("SET DATEFORMAT ymd; SET DATEFIRST %s" % self.datefirst)
-            if self.ops.sql_server_ver < 2005:
-                self.creation.data_types['TextField'] = 'ntext'
-                self.features.can_return_id_from_insert = False
-
-            ms_sqlncli = re.compile('^((LIB)?SQLN?CLI|LIBMSODBCSQL)')
-            self.drv_name = self.connection.getinfo(Database.SQL_DRIVER_NAME).upper()
-
-            # http://msdn.microsoft.com/en-us/library/ms131686.aspx
-            if self.ops.sql_server_ver >= 2005 and ms_sqlncli.match(self.drv_name) and self.MARS_Connection:
-                # How to to activate it: Add 'MARS_Connection': True
-                # to the DATABASE_OPTIONS dictionary setting
-                self.features.can_use_chunked_reads = True
-
-            if self.drv_name.startswith('LIBTDSODBC'):
-                # FreeTDS can't execute some sql queries like CREATE DATABASE etc.
-                # in multi-statement, so we need to commit the above SQL sentence(s)
-                # to avoid this
-                if not self.connection.autocommit:
-                    self.connection.commit()
-
-                freetds_version = self.connection.getinfo(Database.SQL_DRIVER_VER)
-                if self.driver_supports_utf8 is None:
-                    try:
-                        from distutils.version import LooseVersion
-                    except ImportError:
-                        warnings.warn(Warning('Using naive FreeTDS version detection. Install distutils to get better version detection.'))
-                        self.driver_supports_utf8 = not freetds_version.startswith('0.82')
-                    else:
-                        # This is the minimum version that properly supports
-                        # Unicode. Though it started in version 0.82, the
-                        # implementation in that version was buggy.
-                        self.driver_supports_utf8 = LooseVersion(freetds_version) >= LooseVersion('0.91')
-
-            elif self.driver_supports_utf8 is None:
-                self.driver_supports_utf8 = (self.drv_name == 'SQLSRV32.DLL'
-                                             or ms_sqlncli.match(self.drv_name))
-
         return CursorWrapper(cursor, self.driver_supports_utf8, self.encoding)
+
+    def _cursor(self):
+        if self.connection is None:
+            self.connection = self.get_new_connection(self.get_connection_params())
+            self.init_connection_state()
+        return self.create_cursor()
 
     def _execute_foreach(self, sql, table_names=None):
         cursor = self.cursor()
@@ -477,6 +474,12 @@ class CursorWrapper(object):
     def __iter__(self):
         return iter(self.cursor)
 
+    def close(self):
+        try:
+            self.cursor.close()
+        except Database.ProgrammingError:
+            # cursor already closed
+            pass
 
     # # MS SQL Server doesn't support explicit savepoint commits; savepoints are
     # # implicitly committed with the transaction.
