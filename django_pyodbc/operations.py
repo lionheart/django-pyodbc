@@ -21,34 +21,32 @@ class DatabaseOperations(BaseDatabaseOperations):
         self._ss_ver = None
         self._ss_edition = None
         self._is_db2 = None
-        self._left_sql_quote = '['
-        self._right_sql_quote = ']'
         
-    def _get_is_db2(self):
+    @property
+    def is_db2(self):
         if self._is_db2 is None:
             cur = self.connection.cursor()
             try:
                 cur.execute("SELECT * FROM SYSIBM.COLUMNS FETCH FIRST 1 ROWS ONLY")
                 self._is_db2 = True
-                self._left_sql_quote = '{'
-                self._right_sql_quote = '}'
-                
             except Exception:
                 self._is_db2 = False
+
         return self._is_db2
-    is_db2 = property(_get_is_db2)
     
-    def _get_left_sql_quote(self):
-        if self._is_db2 is None:
-            self._get_is_db2()
-        return self._left_sql_quote
-    left_sql_quote = property(_get_left_sql_quote)
+    @property
+    def left_sql_quote(self):
+        if self.is_db2:
+            return '{'
+        else:
+            return '['
     
-    def _get_right_sql_quote(self):
-        if self._is_db2 is None:
-            self._get_is_db2()
-        return self._right_sql_quote
-    right_sql_quote = property(_get_right_sql_quote)
+    @property
+    def right_sql_quote(self):
+        if self.is_db2:
+            return '}'
+        else:
+            return ']'
 
     def _get_sql_server_ver(self):
         """

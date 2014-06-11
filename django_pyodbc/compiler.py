@@ -71,7 +71,15 @@ def _get_order_limit_offset(sql):
 class SQLCompiler(compiler.SQLCompiler):
     def __init__(self,*args,**kwargs):
         super(SQLCompiler,self).__init__(*args,**kwargs)
-        # Pattern to find the quoted column name at the end of a field specification
+        # Pattern to find the quoted column name at the end of a field 
+        # specification
+        #
+        # E.g., if you're talking to MS SQL this regex would become
+        #     \[([^\[]+)\]$
+        #
+        # This would match the underlined part of the following string:
+        #   [foo_table][bar_column]
+        #              ^^^^^^^^^^^^
         self._re_pat_col = re.compile(
             r"\{left_sql_quote}([^\{left_sql_quote}]+)\{right_sql_quote}$".format(
                 left_sql_quote=self.connection.ops.left_sql_quote,
@@ -150,7 +158,7 @@ class SQLCompiler(compiler.SQLCompiler):
         # Check for high mark only and replace with "TOP"
         if self.query.high_mark is not None and not self.query.low_mark:
             if self.connection.ops.is_db2:
-                sql = self._select_top('',raw_sql,self.query.high_mark)
+                sql = self._select_top('', raw_sql, self.query.high_mark)
             else:
                 _select = 'SELECT'
                 if self.query.distinct:
@@ -193,9 +201,9 @@ class SQLCompiler(compiler.SQLCompiler):
         
         # IBM's DB2 cannot have a prefix of `_` for column names
         row_num_col = 'django_pyodbc_row_num' if self.connection.ops.is_db2 else '_row_num'
-        where_row_num = '{0} < {row_num_col}'.format(self.query.low_mark,row_num_col=row_num_col)
+        where_row_num = '{0} < {row_num_col}'.format(self.query.low_mark, row_num_col=row_num_col)
         if self.query.high_mark:
-            where_row_num += ' and {row_num_col} <= {0}'.format(self.query.high_mark,row_num_col=row_num_col)
+            where_row_num += ' and {row_num_col} <= {0}'.format(self.query.high_mark, row_num_col=row_num_col)
         
         # SQL Server 2000 doesn't support the `ROW_NUMBER()` function, thus it
         # is necessary to use the `TOP` construct with `ORDER BY` so we can
@@ -254,10 +262,10 @@ class SQLCompiler(compiler.SQLCompiler):
     def _select_top(self,select,inner_sql,number_to_fetch):
         if self.connection.ops.is_db2:
             return "{select} {inner_sql} FETCH FIRST {number_to_fetch} ROWS ONLY".format(
-                select=select,inner_sql=inner_sql,number_to_fetch=number_to_fetch)
+                select=select, inner_sql=inner_sql, number_to_fetch=number_to_fetch)
         else:
             return "{select} TOP {number_to_fetch} {inner_sql}".format(
-                select=select,inner_sql=inner_sql,number_to_fetch=number_to_fetch)
+                select=select, inner_sql=inner_sql, number_to_fetch=number_to_fetch)
 
     def _fix_slicing_order(self, outer_fields, inner_select, order, inner_table_name):
         """
@@ -344,7 +352,7 @@ class SQLCompiler(compiler.SQLCompiler):
     
         temp_sql = ''.join(paren_buf)
     
-        select_list, from_clause = _break(temp_sql, ' FROM '+self.connection.ops.left_sql_quote)
+        select_list, from_clause = _break(temp_sql, ' FROM ' + self.connection.ops.left_sql_quote)
             
         for col in [x.strip() for x in select_list.split(',')]:
             match = self._re_pat_col.search(col)
@@ -365,6 +373,11 @@ class SQLCompiler(compiler.SQLCompiler):
                 raise Exception('Unable to find a column name when parsing SQL: {0}'.format(col))
 
         return ', '.join(outer), ', '.join(inner) + (from_clause % parens)
+        #                                            ^^^^^^^^^^^^^^^^^^^^^
+        # We can't use `format` here, because `format` uses `{}` as special 
+        # characters, but those happen to also be the quoting tokens for IBM's
+        # DB2
+        
 
     def get_ordering(self):
         # The ORDER BY clause is invalid in views, inline functions,
