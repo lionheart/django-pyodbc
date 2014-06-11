@@ -304,7 +304,7 @@ class SQLCompiler(compiler.SQLCompiler):
                     # Ordering requires the column to be selected by the inner select
                     alias_id += 1
                     # alias column name
-                    col = '{left_sql_quote}{0}___o{1}{right_sql_quote'.format(
+                    col = '{left_sql_quote}{0}___o{1}{right_sql_quote}'.format(
                         col.strip(self.left_sql_quote+self.right_sql_quote),
                         alias_id,
                         left_sql_quote=self.left_sql_quote,
