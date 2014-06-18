@@ -211,7 +211,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         """
         if name.startswith(self.left_sql_quote) and name.endswith(self.right_sql_quote):
             return name # Quoting once is enough.
-        return '%s%s%s' % (self.left_sql_quote,name,self.right_sql_quote)
+        return '%s%s%s' % (self.left_sql_quote, name, self.right_sql_quote)
 
     def random_function_sql(self):
         """
