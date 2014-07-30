@@ -1,9 +1,17 @@
 django-pyodbc
 =============
 
-django-pyodbc is a [Django](http://djangoproject.com) SQL Server DB backend powered by the [pyodbc](https://github.com/mkleehammer/pyodbc) library. pyodbc is a mature, viable way to access SQL Server from Python in multiple platforms and is actively maintained. It's also used by SQLAlchemy for SQL Server connections.
+|version|_   |downloads|_
 
-This is a fork of the original [django-pyodbc](https://code.google.com/p/django-pyodbc/), hosted on Google Code and last updated in 2011.
+.. |downloads| image:: http://img.shields.io/pypi/dm/django-pyodbc.svg?style=flat
+.. _downloads: https://pypi.python.org/pypi/django-pyodbc
+
+.. |version| image:: http://img.shields.io/pypi/v/django-pyodbc.svg?style=flat
+.. _version: https://pypi.python.org/pypi/django-pyodbc
+
+django-pyodbc is a `Django <http://djangoproject.com>`_ SQL Server DB backend powered by the `pyodbc <https://github.com/mkleehammer/pyodbc>`_ library. pyodbc is a mature, viable way to access SQL Server from Python in multiple platforms and is actively maintained. It's also used by SQLAlchemy for SQL Server connections.
+
+This is a fork of the original `django-pyodbc <https://code.google.com/p/django-pyodbc/>`_, hosted on Google Code and last updated in 2011.
 
 Features
 --------
@@ -23,24 +31,26 @@ Installation
 
 1. Install django-pyodbc.
 
-        pip install django-pyodbc
+   .. code:: python
+
+      pip install django-pyodbc
 
 2. Now you can now add a database to your settings using standard ODBC parameters.
 
-    ```python
-    DATABASES = {
-       'default': {
-           'ENGINE': "django_pyodbc",
-           'HOST': "127.0.0.1,1433",
-           'USER': "mssql_user",
-           'PASSWORD': "mssql_password",
-           'NAME': "database_name",
-           'OPTIONS': {
-               'host_is_server': True
-           },
-       }
-    }
-    ```
+   .. code:: python
+
+      DATABASES = {
+         'default': {
+             'ENGINE': "django_pyodbc",
+             'HOST': "127.0.0.1,1433",
+             'USER': "mssql_user",
+             'PASSWORD': "mssql_password",
+             'NAME': "database_name",
+             'OPTIONS': {
+                 'host_is_server': True
+             },
+         }
+      }
 
 3. That's it! You're done.
 
@@ -49,18 +59,19 @@ Configuration
 
 The following settings control the behavior of the backend:
 
-### Standard Django settings
+Standard Django settings
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-`NAME` String. Database name. Required.
+``NAME`` String. Database name. Required.
 
-`HOST` String. SQL Server instance in `server\instance` or `ip,port` format.
+``HOST`` String. SQL Server instance in ``server\instance`` or ``ip,port`` format.
 
-`USER` String. Database user name. If not given then MS Integrated Security
+``USER`` String. Database user name. If not given then MS Integrated Security
     will be used.
 
-`PASSWORD` String. Database user password.
+``PASSWORD`` String. Database user password.
 
-`OPTIONS` Dictionary. Current available keys:
+``OPTIONS`` Dictionary. Current available keys:
 
 * ``driver``
 
@@ -113,31 +124,31 @@ Tests
 
 To run the test suite:
 
-```
-python tests/runtests.py --settings=test_django_pyodbc
-```
+.. code:: bash
+
+   python tests/runtests.py --settings=test_django_pyodbc
+
 
 License
 -------
 
-See [LICENSE](LICENSE).
+See `LICENSE <LICENSE>`_.
 
 Credits
 -------
 
-* [Adam Vandenber](javascript:; "For code to distinguish between different Query classes when subclassing them.")
-* [Alex Vidal](https://github.com/avidal)
-* [Dan Loewenherz](http://dlo.me)
-* [Filip Wasilewski](http://code.djangoproject.com/ticket/5246 "For his pioneering work, proving this was possible and profusely documenting the code with links to relevant vendor technical articles.")
-* [Michael Manfre](https://github.com/manfre)
-* [Michiya Takahashi](https://github.com/michiya)
-* [Paul Tax](https://github.com/tax)
-* [Ramiro Morales](http://djangopeople.net/ramiro/)
-* [Wei guangjing](http://djangopeople.net/vcc/)
-* [mamcx](http://code.djangoproject.com/ticket/5062 "For the first implementation using pymssql.")
+* `Adam Vandenber <javascript:; "For code to distinguish between different Query classes when subclassing them.">`_
+* `Alex Vidal <https://github.com/avidal>`_
+* `Dan Loewenherz <http://dlo.me>`_
+* `Filip Wasilewski <http://code.djangoproject.com/ticket/5246 "For his pioneering work, proving this was possible and profusely documenting the code with links to relevant vendor technical articles.">`_
+* `Michael Manfre <https://github.com/manfre>`_
+* `Michiya Takahashi <https://github.com/michiya>`_
+* `Paul Tax <https://github.com/tax>`_
+* `Ramiro Morales <http://djangopeople.net/ramiro/>`_
+* `Wei guangjing <http://djangopeople.net/vcc/>`_
+* `mamcx <http://code.djangoproject.com/ticket/5062 "For the first implementation using pymssql.">`_
 
 From the original project README.
 
 * All the Django core developers, especially Malcolm Tredinnick. For being an example of technical excellence and for building such an impressive community.
 * The Oracle Django team (Matt Boersma, Ian Kelly) for some excellent ideas when it comes to implement a custom Django DB backend.
-
