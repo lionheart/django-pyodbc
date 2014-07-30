@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import re
 import os
 from django_pyodbc import metadata
 
