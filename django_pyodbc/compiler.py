@@ -47,8 +47,6 @@ _re_data_type_terminator = re.compile(
     re.IGNORECASE,
 )
 
-# Pattern to find the quoted column name at the end of a field specification
-_re_pat_col = re.compile(r"\[([^\[]+)\]$")
 
 _re_order_limit_offset = re.compile(
     r'(?:ORDER BY\s+(.+?))?\s*(?:LIMIT\s+(\d+))?\s*(?:OFFSET\s+(\d+))?$')
@@ -71,6 +69,23 @@ def _get_order_limit_offset(sql):
     return _re_order_limit_offset.search(sql).groups()
 
 class SQLCompiler(compiler.SQLCompiler):
+    def __init__(self,*args,**kwargs):
+        super(SQLCompiler,self).__init__(*args,**kwargs)
+        # Pattern to find the quoted column name at the end of a field 
+        # specification
+        #
+        # E.g., if you're talking to MS SQL this regex would become
+        #     \[([^\[]+)\]$
+        #
+        # This would match the underlined part of the following string:
+        #   [foo_table][bar_column]
+        #              ^^^^^^^^^^^^
+        self._re_pat_col = re.compile(
+            r"\{left_sql_quote}([^\{left_sql_quote}]+)\{right_sql_quote}$".format(
+                left_sql_quote=self.connection.ops.left_sql_quote,
+                right_sql_quote=self.connection.ops.right_sql_quote))
+
+
     def resolve_columns(self, row, fields=()):
         # If the results are sliced, the resultset will have an initial 
         # "row number" column. Remove this column before the ORM sees it.
@@ -142,11 +157,13 @@ class SQLCompiler(compiler.SQLCompiler):
         
         # Check for high mark only and replace with "TOP"
         if self.query.high_mark is not None and not self.query.low_mark:
-            _select = 'SELECT'
-            if self.query.distinct:
-                _select += ' DISTINCT'
-            
-            sql = re.sub(r'(?i)^{0}'.format(_select), '{0} TOP {1}'.format(_select, self.query.high_mark), raw_sql, 1)
+            if self.connection.ops.is_db2:
+                sql = self._select_top('', raw_sql, self.query.high_mark)
+            else:
+                _select = 'SELECT'
+                if self.query.distinct:
+                    _select += ' DISTINCT'
+                sql = re.sub(r'(?i)^{0}'.format(_select), '{0} TOP {1}'.format(_select, self.query.high_mark), raw_sql, 1)
             return sql, fields
             
         # Else we have limits; rewrite the query using ROW_NUMBER()
@@ -182,18 +199,73 @@ class SQLCompiler(compiler.SQLCompiler):
             inner_as=inner_table_name,
         )
         
-        where_row_num = '{0} < _row_num'.format(self.query.low_mark)
+        # IBM's DB2 cannot have a prefix of `_` for column names
+        row_num_col = 'django_pyodbc_row_num' if self.connection.ops.is_db2 else '_row_num'
+        where_row_num = '{0} < {row_num_col}'.format(self.query.low_mark, row_num_col=row_num_col)
         if self.query.high_mark:
-            where_row_num += ' and _row_num <= {0}'.format(self.query.high_mark)        
-            
-        sql = "SELECT _row_num, {outer} FROM ( SELECT ROW_NUMBER() OVER ( ORDER BY {order}) as _row_num, {inner}) as QQQ where {where}".format(
-            outer=outer_fields,
-            order=order,
-            inner=inner_select,
-            where=where_row_num,
-        )
+            where_row_num += ' and {row_num_col} <= {0}'.format(self.query.high_mark, row_num_col=row_num_col)
+        
+        # SQL Server 2000 doesn't support the `ROW_NUMBER()` function, thus it
+        # is necessary to use the `TOP` construct with `ORDER BY` so we can
+        # slice out a particular range of results.
+        if self.connection.ops.sql_server_ver < 2005 and not self.connection.ops.is_db2:
+            num_to_select = self.query.high_mark - self.query.low_mark
+            order_by_col_with_prefix,order_direction = order.rsplit(' ',1)
+            order_by_col = order_by_col_with_prefix.rsplit('.',1)[-1]
+            opposite_order_direction = REV_ODIR[order_direction]
+            sql = r'''
+                SELECT 
+                1, -- placeholder for _row_num
+                * FROM
+                (
+                    SELECT TOP
+                    -- num_to_select
+                    {num_to_select}
+                    *
+                    FROM
+                    (
+                        SELECT TOP 
+                        -- high_mark
+                        {high_mark}
+                        -- inner
+                        {inner}
+                        ORDER BY (
+                        -- order_by_col
+                        {left_sql_quote}AAAA{right_sql_quote}.{order_by_col}
+                        ) 
+                        -- order_direction
+                        {order_direction}
+                    ) AS BBBB ORDER BY ({left_sql_quote}BBBB{right_sql_quote}.{order_by_col}) {opposite_order_direction}
+                ) AS QQQQ ORDER BY ({left_sql_quote}QQQQ{right_sql_quote}.{order_by_col}) {order_direction}
+                '''.format(
+                    inner=inner_select,
+                    num_to_select=num_to_select,
+                    high_mark=self.query.high_mark,
+                    order_by_col=order_by_col,
+                    order_direction=order_direction,
+                    opposite_order_direction=opposite_order_direction,
+                    left_sql_quote=self.connection.ops.left_sql_quote,
+                    right_sql_quote=self.connection.ops.right_sql_quote,
+                )
+        else:
+            sql = "SELECT {row_num_col}, {outer} FROM ( SELECT ROW_NUMBER() OVER ( ORDER BY {order}) as {row_num_col}, {inner}) as QQQ where {where}".format(
+                outer=outer_fields,
+                order=order,
+                inner=inner_select,
+                where=where_row_num,
+                row_num_col=row_num_col
+            )
+        
         
         return sql, fields
+        
+    def _select_top(self,select,inner_sql,number_to_fetch):
+        if self.connection.ops.is_db2:
+            return "{select} {inner_sql} FETCH FIRST {number_to_fetch} ROWS ONLY".format(
+                select=select, inner_sql=inner_sql, number_to_fetch=number_to_fetch)
+        else:
+            return "{select} TOP {number_to_fetch} {inner_sql}".format(
+                select=select, inner_sql=inner_sql, number_to_fetch=number_to_fetch)
 
     def _fix_slicing_order(self, outer_fields, inner_select, order, inner_table_name):
         """
@@ -232,9 +304,11 @@ class SQLCompiler(compiler.SQLCompiler):
                     # Ordering requires the column to be selected by the inner select
                     alias_id += 1
                     # alias column name
-                    col = '[{0}___o{1}]'.format(
-                        col.strip('[]'),
+                    col = '{left_sql_quote}{0}___o{1}{right_sql_quote}'.format(
+                        col.strip(self.left_sql_quote+self.right_sql_quote),
                         alias_id,
+                        left_sql_quote=self.left_sql_quote,
+                        right_sql_quote=self.right_sql_quote,
                     )
                     # add alias to inner_select
                     inner_select = '({0}) AS {1}, {2}'.format(x, col, inner_select)
@@ -264,8 +338,9 @@ class SQLCompiler(compiler.SQLCompiler):
                 buf = paren_buf.pop()
                 
                 # store the expanded paren string
-                parens[key] = buf.format(**parens)
-                paren_buf[paren_depth] += '({' + key + '})'
+                parens[key] = buf% parens
+                #cannot use {} because IBM's DB2 uses {} as quotes
+                paren_buf[paren_depth] += '(%(' + key + ')s)'
             else:
                 paren_buf[paren_depth] += ch
     
@@ -277,10 +352,10 @@ class SQLCompiler(compiler.SQLCompiler):
     
         temp_sql = ''.join(paren_buf)
     
-        select_list, from_clause = _break(temp_sql, ' FROM [')
+        select_list, from_clause = _break(temp_sql, ' FROM ' + self.connection.ops.left_sql_quote)
             
         for col in [x.strip() for x in select_list.split(',')]:
-            match = _re_pat_col.search(col)
+            match = self._re_pat_col.search(col)
             if match:
                 col_name = match.group(1)
                 col_key = col_name.lower()
@@ -297,7 +372,12 @@ class SQLCompiler(compiler.SQLCompiler):
             else:
                 raise Exception('Unable to find a column name when parsing SQL: {0}'.format(col))
 
-        return ', '.join(outer), ', '.join(inner) + from_clause.format(**parens)
+        return ', '.join(outer), ', '.join(inner) + (from_clause % parens)
+        #                                            ^^^^^^^^^^^^^^^^^^^^^
+        # We can't use `format` here, because `format` uses `{}` as special 
+        # characters, but those happen to also be the quoting tokens for IBM's
+        # DB2
+        
 
     def get_ordering(self):
         # The ORDER BY clause is invalid in views, inline functions,

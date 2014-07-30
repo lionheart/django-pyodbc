@@ -153,8 +153,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         self.creation = DatabaseCreation(self)
         self.introspection = DatabaseIntrospection(self)
         self.validation = BaseDatabaseValidation(self)
-
         self.connection = None
+        
 
     def get_connection_params(self):
         settings_dict = self.settings_dict
@@ -289,7 +289,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             # considered the first day of the week (to be consistent with the
             # Django convention for the 'week_day' Django lookup) if the user
             # hasn't told us otherwise
-            cursor.execute("SET DATEFORMAT ymd; SET DATEFIRST %s" % self.datefirst)
+
+            if not self.ops.is_db2:
+                # IBM's DB2 doesn't support this syntax and a suitable
+                # equivalent could not be found.
+                cursor.execute("SET DATEFORMAT ymd; SET DATEFIRST %s" % self.datefirst)
             if self.ops.sql_server_ver < 2005:
                 self.creation.data_types['TextField'] = 'ntext'
                 self.features.can_return_id_from_insert = False
