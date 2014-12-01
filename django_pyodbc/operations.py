@@ -1,10 +1,6 @@
 import datetime
 import decimal
 import time
-try:
-    import pytz
-except:
-    pytz = None
 
 from django.conf import settings
 from django.db.backends import BaseDatabaseOperations
