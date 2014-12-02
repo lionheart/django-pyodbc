@@ -305,10 +305,10 @@ class SQLCompiler(compiler.SQLCompiler):
                     alias_id += 1
                     # alias column name
                     col = '{left_sql_quote}{0}___o{1}{right_sql_quote}'.format(
-                        col.strip(self.left_sql_quote+self.right_sql_quote),
+                        col.strip(self.connection.ops.left_sql_quote+self.connection.ops.right_sql_quote),
                         alias_id,
-                        left_sql_quote=self.left_sql_quote,
-                        right_sql_quote=self.right_sql_quote,
+                        left_sql_quote=self.connection.ops.left_sql_quote,
+                        right_sql_quote=self.connection.ops.right_sql_quote,
                     )
                     # add alias to inner_select
                     inner_select = '({0}) AS {1}, {2}'.format(x, col, inner_select)
