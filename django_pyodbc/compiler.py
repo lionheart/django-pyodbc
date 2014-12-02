@@ -1,9 +1,10 @@
 import re
-from django.db.models.sql import compiler
-import django
 from datetime import datetime
 
+from django.db.models.sql import compiler
+import django
 from django_pyodbc.compat import zip_longest
+
 
 REV_ODIR = {
     'ASC': 'DESC',
@@ -11,29 +12,29 @@ REV_ODIR = {
 }
 
 SQL_SERVER_8_LIMIT_QUERY = \
-"""SELECT *
-FROM (
-  SELECT TOP %(limit)s *
-  FROM (
-    %(orig_sql)s
-    ORDER BY %(ord)s
-  ) AS %(table)s
-  ORDER BY %(rev_ord)s
-) AS %(table)s
-ORDER BY %(ord)s"""
+    """SELECT *
+    FROM (
+      SELECT TOP %(limit)s *
+      FROM (
+        %(orig_sql)s
+        ORDER BY %(ord)s
+      ) AS %(table)s
+      ORDER BY %(rev_ord)s
+    ) AS %(table)s
+    ORDER BY %(ord)s"""
 
 SQL_SERVER_8_NO_LIMIT_QUERY = \
-"""SELECT *
-FROM %(table)s
-WHERE %(key)s NOT IN (
-  %(orig_sql)s
-  ORDER BY %(ord)s
-)"""
+    """SELECT *
+    FROM %(table)s
+    WHERE %(key)s NOT IN (
+      %(orig_sql)s
+      ORDER BY %(ord)s
+    )"""
 
 # Strategies for handling limit+offset emulation:
-USE_ROW_NUMBER = 0 # For SQL Server >= 2005
-USE_TOP_HMARK = 1 # For SQL Server 2000 when both limit and offset are provided
-USE_TOP_LMARK = 2 # For SQL Server 2000 when offset but no limit is provided
+USE_ROW_NUMBER = 0  # For SQL Server >= 2005
+USE_TOP_HMARK = 1  # For SQL Server 2000 when both limit and offset are provided
+USE_TOP_LMARK = 2  # For SQL Server 2000 when offset but no limit is provided
 
 
 # Pattern to scan a column data type string and split the data type from any
@@ -47,7 +48,6 @@ _re_data_type_terminator = re.compile(
     re.IGNORECASE,
 )
 
-
 _re_order_limit_offset = re.compile(
     r'(?:ORDER BY\s+(.+?))?\s*(?:LIMIT\s+(\d+))?\s*(?:OFFSET\s+(\d+))?$')
 
@@ -56,8 +56,10 @@ _re_col_placeholder = re.compile(r'\{_placeholder_(\d+)\}')
 
 _re_find_order_direction = re.compile(r'\s+(asc|desc)\s*$', re.IGNORECASE)
 
+
 def _remove_order_limit_offset(sql):
-    return _re_order_limit_offset.sub('',sql).split(None, 1)[1]
+    return _re_order_limit_offset.sub('', sql).split(None, 1)[1]
+
 
 def _break(s, find):
     """Break a string s into the part before the substring to find, 
@@ -65,17 +67,19 @@ def _break(s, find):
     i = s.find(find)
     return s[:i], s[i:]
 
+
 def _get_order_limit_offset(sql):
     return _re_order_limit_offset.search(sql).groups()
 
+
 class SQLCompiler(compiler.SQLCompiler):
-    def __init__(self,*args,**kwargs):
-        super(SQLCompiler,self).__init__(*args,**kwargs)
+    def __init__(self, *args, **kwargs):
+        super(SQLCompiler, self).__init__(*args, **kwargs)
         # Pattern to find the quoted column name at the end of a field 
         # specification
         #
         # E.g., if you're talking to MS SQL this regex would become
-        #     \[([^\[]+)\]$
+        # \[([^\[]+)\]$
         #
         # This would match the underlined part of the following string:
         #   [foo_table][bar_column]
@@ -114,7 +118,7 @@ class SQLCompiler(compiler.SQLCompiler):
         E.g. AVG([1, 2]) needs to yield 1.5, not 1
         """
         for alias, aggregate in self.query.aggregate_select.items():
-            if aggregate.sql_function == 'AVG':# and self.connection.cast_avg_to_float:
+            if aggregate.sql_function == 'AVG':  # and self.connection.cast_avg_to_float:
                 # Embed the CAST in the template on this query to
                 # maintain multi-db support.
                 self.query.aggregate_select[alias].sql_template = \
@@ -134,11 +138,11 @@ class SQLCompiler(compiler.SQLCompiler):
         # Django #12192 - Don't execute any DB query when QS slicing results in limit 0
         if with_limits and self.query.low_mark == self.query.high_mark:
             return '', ()
-        
+
         self._fix_aggregates()
-        
+
         self._using_row_number = False
-        
+
         # Get out of the way if we're not a select query or there's no limiting involved.
         check_limits = with_limits and (self.query.low_mark or self.query.high_mark is not None)
         if not check_limits:
@@ -154,7 +158,7 @@ class SQLCompiler(compiler.SQLCompiler):
             return result
 
         raw_sql, fields = super(SQLCompiler, self).as_sql(False, with_col_aliases)
-        
+
         # Check for high mark only and replace with "TOP"
         if self.query.high_mark is not None and not self.query.low_mark:
             if self.connection.ops.is_db2:
@@ -163,9 +167,10 @@ class SQLCompiler(compiler.SQLCompiler):
                 _select = 'SELECT'
                 if self.query.distinct:
                     _select += ' DISTINCT'
-                sql = re.sub(r'(?i)^{0}'.format(_select), '{0} TOP {1}'.format(_select, self.query.high_mark), raw_sql, 1)
+                sql = re.sub(r'(?i)^{0}'.format(_select), '{0} TOP {1}'.format(_select, self.query.high_mark), raw_sql,
+                             1)
             return sql, fields
-            
+
         # Else we have limits; rewrite the query using ROW_NUMBER()
         self._using_row_number = True
 
@@ -179,13 +184,13 @@ class SQLCompiler(compiler.SQLCompiler):
         inner_table_name = qn('AAAA')
 
         outer_fields, inner_select, order = self._fix_slicing_order(outer_fields, inner_select, order, inner_table_name)
-        
+
         # map a copy of outer_fields for injected subselect
         f = []
         for x in outer_fields.split(','):
             i = x.upper().find(' AS ')
             if i != -1:
-                x = x[i+4:]
+                x = x[i + 4:]
             if x.find('.') != -1:
                 tbl, col = x.rsplit('.', 1)
             else:
@@ -198,20 +203,20 @@ class SQLCompiler(compiler.SQLCompiler):
             inner=inner_select,
             inner_as=inner_table_name,
         )
-        
+
         # IBM's DB2 cannot have a prefix of `_` for column names
         row_num_col = 'django_pyodbc_row_num' if self.connection.ops.is_db2 else '_row_num'
         where_row_num = '{0} < {row_num_col}'.format(self.query.low_mark, row_num_col=row_num_col)
         if self.query.high_mark:
             where_row_num += ' and {row_num_col} <= {0}'.format(self.query.high_mark, row_num_col=row_num_col)
-        
+
         # SQL Server 2000 doesn't support the `ROW_NUMBER()` function, thus it
         # is necessary to use the `TOP` construct with `ORDER BY` so we can
         # slice out a particular range of results.
         if self.connection.ops.sql_server_ver < 2005 and not self.connection.ops.is_db2:
             num_to_select = self.query.high_mark - self.query.low_mark
-            order_by_col_with_prefix,order_direction = order.rsplit(' ',1)
-            order_by_col = order_by_col_with_prefix.rsplit('.',1)[-1]
+            order_by_col_with_prefix, order_direction = order.rsplit(' ', 1)
+            order_by_col = order_by_col_with_prefix.rsplit('.', 1)[-1]
             opposite_order_direction = REV_ODIR[order_direction]
             sql = r'''
                 SELECT 
@@ -238,15 +243,15 @@ class SQLCompiler(compiler.SQLCompiler):
                     ) AS BBBB ORDER BY ({left_sql_quote}BBBB{right_sql_quote}.{order_by_col}) {opposite_order_direction}
                 ) AS QQQQ ORDER BY ({left_sql_quote}QQQQ{right_sql_quote}.{order_by_col}) {order_direction}
                 '''.format(
-                    inner=inner_select,
-                    num_to_select=num_to_select,
-                    high_mark=self.query.high_mark,
-                    order_by_col=order_by_col,
-                    order_direction=order_direction,
-                    opposite_order_direction=opposite_order_direction,
-                    left_sql_quote=self.connection.ops.left_sql_quote,
-                    right_sql_quote=self.connection.ops.right_sql_quote,
-                )
+                inner=inner_select,
+                num_to_select=num_to_select,
+                high_mark=self.query.high_mark,
+                order_by_col=order_by_col,
+                order_direction=order_direction,
+                opposite_order_direction=opposite_order_direction,
+                left_sql_quote=self.connection.ops.left_sql_quote,
+                right_sql_quote=self.connection.ops.right_sql_quote,
+            )
         else:
             sql = "SELECT {row_num_col}, {outer} FROM ( SELECT ROW_NUMBER() OVER ( ORDER BY {order}) as {row_num_col}, {inner}) as QQQ where {where}".format(
                 outer=outer_fields,
@@ -255,11 +260,10 @@ class SQLCompiler(compiler.SQLCompiler):
                 where=where_row_num,
                 row_num_col=row_num_col
             )
-        
-        
+
         return sql, fields
-        
-    def _select_top(self,select,inner_sql,number_to_fetch):
+
+    def _select_top(self, select, inner_sql, number_to_fetch):
         if self.connection.ops.is_db2:
             return "{select} {inner_sql} FETCH FIRST {number_to_fetch} ROWS ONLY".format(
                 select=select, inner_sql=inner_sql, number_to_fetch=number_to_fetch)
@@ -274,10 +278,10 @@ class SQLCompiler(compiler.SQLCompiler):
         """
         # Using ROW_NUMBER requires an ordering
         if order is None:
-            meta = self.query.get_meta()                
+            meta = self.query.get_meta()
             column = meta.pk.db_column or meta.pk.get_attname()
             order = '{0}.{1} ASC'.format(
-                inner_table_name, 
+                inner_table_name,
                 self.connection.ops.quote_name(column),
             )
         else:
@@ -305,7 +309,7 @@ class SQLCompiler(compiler.SQLCompiler):
                     alias_id += 1
                     # alias column name
                     col = '{left_sql_quote}{0}___o{1}{right_sql_quote}'.format(
-                        col.strip(self.left_sql_quote+self.right_sql_quote),
+                        col.strip(self.left_sql_quote + self.right_sql_quote),
                         alias_id,
                         left_sql_quote=self.left_sql_quote,
                         right_sql_quote=self.right_sql_quote,
@@ -319,14 +323,17 @@ class SQLCompiler(compiler.SQLCompiler):
     def _alias_columns(self, sql):
         """Return tuple of SELECT and FROM clauses, aliasing duplicate column names."""
         qn = self.connection.ops.quote_name
-        
+
         outer = list()
         inner = list()
         names_seen = list()
-        
+
         # replace all parens with placeholders
         paren_depth, paren_buf = 0, ['']
         parens, i = {}, 0
+
+        # save original formats
+        sql = sql.replace('%', '%%')
         for ch in sql:
             if ch == '(':
                 i += 1
@@ -336,24 +343,24 @@ class SQLCompiler(compiler.SQLCompiler):
                 paren_depth -= 1
                 key = '_placeholder_{0}'.format(i)
                 buf = paren_buf.pop()
-                
+
                 # store the expanded paren string
-                parens[key] = buf% parens
-                #cannot use {} because IBM's DB2 uses {} as quotes
+                parens[key] = buf % parens
+                # cannot use {} because IBM's DB2 uses {} as quotes
                 paren_buf[paren_depth] += '(%(' + key + ')s)'
             else:
                 paren_buf[paren_depth] += ch
-    
+
         def _replace_sub(col):
             """Replace all placeholders with expanded values"""
             while _re_col_placeholder.search(col):
                 col = col.format(**parens)
             return col
-    
+
         temp_sql = ''.join(paren_buf)
-    
+
         select_list, from_clause = _break(temp_sql, ' FROM ' + self.connection.ops.left_sql_quote)
-            
+
         for col in [x.strip() for x in select_list.split(',')]:
             match = self._re_pat_col.search(col)
             if match:
@@ -367,17 +374,17 @@ class SQLCompiler(compiler.SQLCompiler):
                 else:
                     outer.append(qn(col_name))
                     inner.append(_replace_sub(col))
-    
+
                 names_seen.append(col_key)
             else:
                 raise Exception('Unable to find a column name when parsing SQL: {0}'.format(col))
 
         return ', '.join(outer), ', '.join(inner) + (from_clause % parens)
-        #                                            ^^^^^^^^^^^^^^^^^^^^^
+        # ^^^^^^^^^^^^^^^^^^^^^
         # We can't use `format` here, because `format` uses `{}` as special 
         # characters, but those happen to also be the quoting tokens for IBM's
         # DB2
-        
+
 
     def get_ordering(self):
         # The ORDER BY clause is invalid in views, inline functions,
@@ -390,10 +397,10 @@ class SQLCompiler(compiler.SQLCompiler):
         return super(SQLCompiler, self).get_ordering()
 
 
-
 class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
     # search for after table/column list
-    _re_values_sub = re.compile(r'(?P<prefix>\)|\])(?P<default>\s*|\s*default\s*)values(?P<suffix>\s*|\s+\()?', re.IGNORECASE)
+    _re_values_sub = re.compile(r'(?P<prefix>\)|\])(?P<default>\s*|\s*default\s*)values(?P<suffix>\s*|\s+\()?',
+                                re.IGNORECASE)
     # ... and insert the OUTPUT clause between it and the values list (or DEFAULT VALUES).
     _values_repl = r'\g<prefix> OUTPUT INSERTED.{col} INTO @sqlserver_ado_return_id\g<default>VALUES\g<suffix>'
 
@@ -406,7 +413,7 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
         if isinstance(result, list):
             # Django 1.4 wraps return in list
             return [self._fix_insert(x[0], x[1]) for x in result]
-        
+
         sql, params = result
         return self._fix_insert(sql, params)
 
@@ -416,7 +423,7 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
         other necessary fixes.
         """
         meta = self.query.get_meta()
-        
+
         if meta.has_auto_field:
             if hasattr(self.query, 'fields'):
                 # django 1.4 replaced columns with fields
@@ -426,9 +433,9 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
                 # < django 1.4
                 fields = self.query.columns
                 auto_field = meta.auto_field.db_column or meta.auto_field.column
-    
+
             auto_in_fields = auto_field in fields
-    
+
             quoted_table = self.connection.ops.quote_name(meta.db_table)
             if not fields or (auto_in_fields and len(fields) == 1 and not params):
                 # convert format when inserting only the primary key without 
@@ -451,7 +458,7 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
 
             # Determine datatype for use with the table variable that will return the inserted ID            
             pk_db_type = _re_data_type_terminator.split(meta.pk.db_type(self.connection))[0]
-            
+
             # NOCOUNT ON to prevent additional trigger/stored proc related resultsets
             sql = 'SET NOCOUNT ON;{declare_table_var};{sql};{select_return_id}'.format(
                 sql=sql,
@@ -461,14 +468,14 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
                 ),
                 select_return_id="SELECT * FROM @sqlserver_ado_return_id",
             )
-            
+
             output = self._values_repl.format(col=col)
             sql = self._re_values_sub.sub(output, sql)
 
         return sql, params
 
-class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
 
+class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
     def as_sql_legacy(self):
         # We don't need quote_name_unless_alias() here, since these are all
         # going to be column names (so we can avoid the extra overhead).
@@ -505,7 +512,7 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
                     sql = ' '.join(result)
                 else:
                     sql = "SET IDENTITY_INSERT %s ON;\n%s;\nSET IDENTITY_INSERT %s OFF" % \
-                        (quoted_table, sql, quoted_table)
+                          (quoted_table, sql, quoted_table)
 
         return sql, params
 
@@ -528,7 +535,8 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
         if has_fields:
             params = values = [
                 [
-                    f.get_db_prep_save(getattr(obj, f.attname) if self.query.raw else f.pre_save(obj, True), connection=self.connection)
+                    f.get_db_prep_save(getattr(obj, f.attname) if self.query.raw else f.pre_save(obj, True),
+                                       connection=self.connection)
                     for f in fields
                 ]
                 for obj in self.query.objs
@@ -570,7 +578,7 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
                         sql = "INSERT INTO %s DEFAULT VALUES" % quoted_table
                     else:
                         sql = "SET IDENTITY_INSERT %s ON;\n%s;\nSET IDENTITY_INSERT %s OFF" % \
-                            (quoted_table, sql, quoted_table)
+                              (quoted_table, sql, quoted_table)
                 out.append([sql, params])
             items = out
         return items
@@ -579,16 +587,20 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
 class SQLDeleteCompiler(compiler.SQLDeleteCompiler, SQLCompiler):
     pass
 
+
 class SQLUpdateCompiler(compiler.SQLUpdateCompiler, SQLCompiler):
     pass
+
 
 class SQLAggregateCompiler(compiler.SQLAggregateCompiler, SQLCompiler):
     def as_sql(self, qn=None):
         self._fix_aggregates()
         return super(SQLAggregateCompiler, self).as_sql(qn=qn)
 
+
 class SQLDateCompiler(compiler.SQLDateCompiler, SQLCompiler):
     pass
+
 
 class SQLDateTimeCompiler(compiler.SQLDateCompiler, SQLCompiler):
     pass
