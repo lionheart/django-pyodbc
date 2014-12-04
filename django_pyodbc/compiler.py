@@ -71,6 +71,8 @@ def _get_order_limit_offset(sql):
 class SQLCompiler(compiler.SQLCompiler):
     def __init__(self,*args,**kwargs):
         super(SQLCompiler,self).__init__(*args,**kwargs)
+        self.left_sql_quote = self.connection.ops.left_sql_quote
+        self.right_sql_quote = self.connection.ops.right_sql_quote
         # Pattern to find the quoted column name at the end of a field
         # specification
         #
@@ -82,8 +84,8 @@ class SQLCompiler(compiler.SQLCompiler):
         #              ^^^^^^^^^^^^
         self._re_pat_col = re.compile(
             r"\{left_sql_quote}([^\{left_sql_quote}]+)\{right_sql_quote}$".format(
-                left_sql_quote=self.connection.ops.left_sql_quote,
-                right_sql_quote=self.connection.ops.right_sql_quote))
+                left_sql_quote=self.left_sql_quote,
+                right_sql_quote=self.right_sql_quote))
 
 
     def resolve_columns(self, row, fields=()):
@@ -244,8 +246,8 @@ class SQLCompiler(compiler.SQLCompiler):
                     order_by_col=order_by_col,
                     order_direction=order_direction,
                     opposite_order_direction=opposite_order_direction,
-                    left_sql_quote=self.connection.ops.left_sql_quote,
-                    right_sql_quote=self.connection.ops.right_sql_quote,
+                    left_sql_quote=self.left_sql_quote,
+                    right_sql_quote=self.right_sql_quote,
                 )
         else:
             sql = "SELECT {row_num_col}, {outer} FROM ( SELECT ROW_NUMBER() OVER ( ORDER BY {order}) as {row_num_col}, {inner}) as QQQ where {where}".format(
@@ -355,7 +357,7 @@ class SQLCompiler(compiler.SQLCompiler):
 
         temp_sql = ''.join(paren_buf)
 
-        select_list, from_clause = _break(temp_sql, ' FROM ' + self.connection.ops.left_sql_quote)
+        select_list, from_clause = _break(temp_sql, ' FROM ' + self.left_sql_quote)
 
         for col in [x.strip() for x in select_list.split(',')]:
             match = self._re_pat_col.search(col)
