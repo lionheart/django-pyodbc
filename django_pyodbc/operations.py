@@ -382,10 +382,11 @@ class DatabaseOperations(BaseDatabaseOperations):
             return datetime.datetime(*(time.strptime(value, '%H:%M:%S')[:6]))
         return datetime.datetime(1900, 1, 1, value.hour, value.minute, value.second)
 
-    def year_lookup_bounds(self, value):
+    def year_lookup_bounds_for_date_field(self, value):
         """
         Returns a two-elements list with the lower and upper bound to be used
-        with a BETWEEN operator to query a field value using a year lookup
+        with a BETWEEN operator to query a DateField value using a year
+        lookup.
 
         `value` is an int, containing the looked-up year.
         """
@@ -393,6 +394,19 @@ class DatabaseOperations(BaseDatabaseOperations):
         # SQL Server doesn't support microseconds
         last = '%s-12-31 23:59:59'
         return [first % value, last % value]
+
+    def year_lookup_bounds_for_datetime_field(self, value):
+        """
+        Returns a two-elements list with the lower and upper bound to be used
+        with a BETWEEN operator to query a DateTimeField value using a year
+        lookup.
+
+        `value` is an int, containing the looked-up year.
+        """
+        bounds = super(DatabaseOperations, self).year_lookup_bounds_for_datetime_field(value)
+        if settings.USE_TZ:
+            bounds = [b.astimezone(timezone.utc).replace(tzinfo=None) for b in bounds]
+        return [b.isoformat(str(' ')) for b in bounds]
 
     def value_to_db_decimal(self, value, max_digits, decimal_places):
         """
