@@ -404,6 +404,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         `value` is an int, containing the looked-up year.
         """
         bounds = super(DatabaseOperations, self).year_lookup_bounds_for_datetime_field(value)
+        bounds = [b.replace(microsecond=0) for b in bounds]
         if settings.USE_TZ:
             bounds = [b.astimezone(timezone.utc).replace(tzinfo=None) for b in bounds]
         return [b.isoformat(str(' ')) for b in bounds]
