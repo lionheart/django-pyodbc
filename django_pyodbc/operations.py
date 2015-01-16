@@ -365,10 +365,10 @@ class DatabaseOperations(BaseDatabaseOperations):
         if self.connection._DJANGO_VERSION >= 14 and settings.USE_TZ:
             if timezone.is_aware(value):
                 # pyodbc donesn't support datetimeoffset
-                value = value.astimezone(timezone.utc)
+                value = value.astimezone(timezone.utc).replace(tzinfo=None)
         if not self.connection.features.supports_microsecond_precision:
             value = value.replace(microsecond=0)
-        return value
+        return smart_text(value)
 
     def value_to_db_time(self, value):
         """
