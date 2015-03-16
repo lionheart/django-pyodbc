@@ -367,6 +367,12 @@ class CursorWrapper(object):
         self.last_params = ()
         self.encoding = encoding
 
+    def close(self):
+        try:
+            self.cursor.close()
+        except Database.ProgrammingError:
+            pass
+
     def format_sql(self, sql, n_params=None):
         if not self.driver_supports_utf8 and isinstance(sql, text_type):
             # Older FreeTDS (and other ODBC drivers?) don't support Unicode yet, so
