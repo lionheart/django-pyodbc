@@ -52,7 +52,7 @@ _re_order_limit_offset = re.compile(
     r'(?:ORDER BY\s+(.+?))?\s*(?:LIMIT\s+(\d+))?\s*(?:OFFSET\s+(\d+))?$')
 
 # Pattern used in column aliasing to find sub-select placeholders
-_re_col_placeholder = re.compile(r'\{_placeholder_(\d+)\}')
+_re_col_placeholder = re.compile(r'\(_placeholder_(\d+)\)')
 
 _re_find_order_direction = re.compile(r'\s+(asc|desc)\s*$', re.IGNORECASE)
 
