@@ -157,6 +157,11 @@ class SQLCompiler(compiler.SQLCompiler):
 
         raw_sql, fields = super(SQLCompiler, self).as_sql(False, with_col_aliases)
 
+        if self.query.order_by and self.connection.ops.sql_server_ver >= 2012 and not self.connection.ops.is_db2:
+            next_count = self.query.high_mark - self.query.low_mark
+            sql = "%s OFFSET %s ROWS FETCH NEXT %s ROWS ONLY;" % (raw_sql, self.query.low_mark, next_count)
+            return sql, fields
+
         # Check for high mark only and replace with "TOP"
         if self.query.high_mark is not None and not self.query.low_mark:
             if self.connection.ops.is_db2:
