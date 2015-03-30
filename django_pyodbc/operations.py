@@ -1,10 +1,6 @@
 import datetime
 import decimal
 import time
-try:
-    import pytz
-except:
-    pytz = None
 
 from django.conf import settings
 from django.db.backends import BaseDatabaseOperations
@@ -103,7 +99,9 @@ class DatabaseOperations(BaseDatabaseOperations):
         """
         field_name = self.quote_name(field_name)
         if settings.USE_TZ:
-            if pytz is None:
+            try:
+                import pytz
+            except ImportError:
                 from django.core.exceptions import ImproperlyConfigured
                 raise ImproperlyConfigured("This query requires pytz, "
                                            "but it isn't installed.")
@@ -367,10 +365,10 @@ class DatabaseOperations(BaseDatabaseOperations):
         if self.connection._DJANGO_VERSION >= 14 and settings.USE_TZ:
             if timezone.is_aware(value):
                 # pyodbc donesn't support datetimeoffset
-                value = value.astimezone(timezone.utc)
+                value = value.astimezone(timezone.utc).replace(tzinfo=None)
         if not self.connection.features.supports_microsecond_precision:
             value = value.replace(microsecond=0)
-        return value
+        return smart_text(value)
 
     def value_to_db_time(self, value):
         """
@@ -384,10 +382,11 @@ class DatabaseOperations(BaseDatabaseOperations):
             return datetime.datetime(*(time.strptime(value, '%H:%M:%S')[:6]))
         return datetime.datetime(1900, 1, 1, value.hour, value.minute, value.second)
 
-    def year_lookup_bounds(self, value):
+    def year_lookup_bounds_for_date_field(self, value):
         """
         Returns a two-elements list with the lower and upper bound to be used
-        with a BETWEEN operator to query a field value using a year lookup
+        with a BETWEEN operator to query a DateField value using a year
+        lookup.
 
         `value` is an int, containing the looked-up year.
         """
@@ -395,6 +394,20 @@ class DatabaseOperations(BaseDatabaseOperations):
         # SQL Server doesn't support microseconds
         last = '%s-12-31 23:59:59'
         return [first % value, last % value]
+
+    def year_lookup_bounds_for_datetime_field(self, value):
+        """
+        Returns a two-elements list with the lower and upper bound to be used
+        with a BETWEEN operator to query a DateTimeField value using a year
+        lookup.
+
+        `value` is an int, containing the looked-up year.
+        """
+        bounds = super(DatabaseOperations, self).year_lookup_bounds_for_datetime_field(value)
+        bounds = [b.replace(microsecond=0) for b in bounds]
+        if settings.USE_TZ:
+            bounds = [b.astimezone(timezone.utc).replace(tzinfo=None) for b in bounds]
+        return [b.isoformat(str(' ')) for b in bounds]
 
     def value_to_db_decimal(self, value, max_digits, decimal_places):
         """
@@ -459,3 +472,14 @@ class DatabaseOperations(BaseDatabaseOperations):
         # Django #19096 - As of Django 1.5, can return None, None to bypass the 
         # core's SQL mangling.
         return (None, None)
+
+    def datetime_extract_sql(self, lookup_type, field_name, tzname):
+        """
+        Given a lookup_type of 'year', 'month', 'day', 'hour', 'minute' or
+        'second', returns the SQL that extracts a value from the given
+        datetime field field_name, and a tuple of parameters.
+        """
+        field_name = self._switch_tz_offset_sql(field_name, tzname)
+        sql = self.date_extract_sql(lookup_type, field_name)
+        params = []
+        return sql, params
