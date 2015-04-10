@@ -338,7 +338,9 @@ class SQLCompiler(compiler.SQLCompiler):
                 buf = paren_buf.pop()
                 
                 # store the expanded paren string
+                buf = re.sub(r'%([^\(])', r'$$$\1', buf)
                 parens[key] = buf% parens
+                parens[key] = re.sub(r'\$\$\$([^\(])', r'%\1', parens[key])
                 #cannot use {} because IBM's DB2 uses {} as quotes
                 paren_buf[paren_depth] += '(%(' + key + ')s)'
             else:
