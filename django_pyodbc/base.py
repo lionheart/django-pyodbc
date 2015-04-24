@@ -331,6 +331,14 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         #cursor.execute('EXEC sp_msforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL"')
         self.check_constraints()
 
+    def is_usable(self):
+        try:
+            self.connection.cursor().execute("SELECT 1")
+        except Database.Error:
+            return False
+        else:
+            return True
+
 
 class CursorWrapper(object):
     """
