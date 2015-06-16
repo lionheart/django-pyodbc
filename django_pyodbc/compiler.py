@@ -365,7 +365,7 @@ class SQLCompiler(compiler.SQLCompiler):
             placeholder_data["i"] = i
             key = "_placeholder_{0}".format(i)
             parens[key] = "%s"
-            return "%("+key+")s"
+            return "%(" + key + ")s"
 
         temp_sql = re.sub("%s", _alias_placeholders, temp_sql)
     
