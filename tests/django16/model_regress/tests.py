@@ -36,12 +36,12 @@ class ModelTests(TestCase):
         Regression test for issue #90 - using slices breaks placeholders.
         """
 
-        Slicer.objects.create(num=4, f2=3)
-        Slicer.objects.create(num=4, f2=3)
-        Slicer.objects.create(num=4, f2=3)
-        Slicer.objects.create(num=4, f2=3)
-        v1 = Slicer.objects.filter(num=4, f2=3)[1:2]
-        v2 = Slicer.objects.filter(num=4)[1:2]
+        Slicer.objects.create(field1=4, field2=3)
+        Slicer.objects.create(field1=4, field2=3)
+        Slicer.objects.create(field1=4, field2=3)
+        Slicer.objects.create(field1=4, field2=3)
+        v1 = Slicer.objects.filter(field1=4, field2=3)[1:2]
+        v2 = Slicer.objects.filter(field1=4)[1:2]
         list(v1)
         # This was the trigger for the behavior in #90
         list(v2)

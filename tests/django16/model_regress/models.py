@@ -85,5 +85,5 @@ class Model3(models.Model):
 
 
 class Slicer(models.Model):
-    num = models.IntegerField()
-    f2 = models.IntegerField()
+    field1 = models.IntegerField()
+    field2 = models.IntegerField()
