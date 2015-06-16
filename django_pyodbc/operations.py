@@ -7,7 +7,10 @@ except:
     pytz = None
 
 from django.conf import settings
-from django.db.backends import BaseDatabaseOperations
+try:
+    from django.db.backends.base.operations import BaseDatabaseOperations
+except ImportError:
+    from django.db.backends import BaseDatabaseOperations
 
 from django_pyodbc.compat import smart_text, string_types, timezone
 
