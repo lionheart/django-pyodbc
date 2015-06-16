@@ -83,6 +83,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     unicode_results = False
     datefirst = 7
     Database = Database
+    limit_table_list = False
 
     # Collations:       http://msdn2.microsoft.com/en-us/library/ms184391.aspx
     #                   http://msdn2.microsoft.com/en-us/library/ms179886.aspx
@@ -130,6 +131,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             self.encoding = options.get('encoding', 'utf-8')
             self.driver_supports_utf8 = options.get('driver_supports_utf8', None)
             self.driver_needs_utf8 = options.get('driver_needs_utf8', None)
+            self.limit_table_list = options.get('limit_table_list', False)
 
             # make lookup operators to be collation-sensitive if needed
             self.collation = options.get('collation', None)
