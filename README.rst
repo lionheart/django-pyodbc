@@ -121,6 +121,9 @@ Standard Django settings
 
     If this option is not present, the value is guessed according to the driver set.
 
+* ``limit_table_list``
+
+    Boolean.  This will restrict the table list query to the dbo schema.
 
 Tests
 -----

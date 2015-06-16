@@ -1,8 +1,11 @@
 from __future__ import absolute_import, unicode_literals
 
-from django.db import connection
+from django.db import connection, DEFAULT_DB_ALIAS
+from django.db.utils import ConnectionHandler
 from django.test import TestCase, skipUnlessDBFeature, skipIfDBFeature
 from django.utils import unittest
+from django.conf import settings
+import copy
 
 from .models import Reporter, Article
 
@@ -141,6 +144,48 @@ class IntrospectionTests(TestCase):
         indexes = connection.introspection.get_indexes(cursor, Reporter._meta.db_table)
         self.assertNotIn('first_name', indexes)
         self.assertIn('id', indexes)
+
+    def test_non_app_tables(self):
+        """
+        Regression test for issue #92
+        """
+        cursor = connection.cursor()
+        cursor.execute("CREATE SCHEMA non_app_schema")
+        cursor.execute('CREATE TABLE [non_app_schema].[test_table_issue_92] (id INTEGER);')
+        cursor.commit()
+
+        connection.close()
+
+        # Test the default behavior, where limit_table_list isn't set.
+        new_settings = copy.deepcopy(settings.DATABASES)
+        if "limit_table_list" in new_settings[DEFAULT_DB_ALIAS]['OPTIONS']:
+            del new_settings[DEFAULT_DB_ALIAS]['OPTIONS']['limit_table_list']
+
+        new_connections = ConnectionHandler(new_settings)
+        new_connection = new_connections[DEFAULT_DB_ALIAS]
+        try:
+            tl = new_connection.introspection.table_names()
+            self.assertIn('test_table_issue_92', tl)
+            new_connection.close()
+        finally:
+            try:
+                new_connection.close()
+            except DatabaseError:
+                pass
+
+        # Now test behavior where it is true - the non-dbo table should be missing.
+        new_settings[DEFAULT_DB_ALIAS]['OPTIONS']['limit_table_list'] = True
+        new_connections = ConnectionHandler(new_settings)
+        new_connection = new_connections[DEFAULT_DB_ALIAS]
+        try:
+            tl = new_connection.introspection.table_names()
+            self.assertNotIn('test_table_issue_92', tl)
+            new_connection.close()
+        finally:
+            try:
+                new_connection.close()
+            except DatabaseError:
+                pass
 
 
 def datatype(dbtype, description):

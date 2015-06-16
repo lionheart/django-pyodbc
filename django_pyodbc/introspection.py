@@ -37,8 +37,10 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         Returns a list of table names in the current database.
         """
         # TABLES: http://msdn2.microsoft.com/en-us/library/ms186224.aspx
-
-        cursor.execute("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'")
+        if cursor.db.limit_table_list:
+            cursor.execute("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = 'dbo'")
+        else:
+            cursor.execute("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'")
         return [row[0] for row in cursor.fetchall()]
 
         # Or pyodbc specific:
