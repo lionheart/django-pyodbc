@@ -142,6 +142,16 @@ class IntrospectionTests(TestCase):
         self.assertNotIn('first_name', indexes)
         self.assertIn('id', indexes)
 
+    def test_non_app_tables(self):
+        """
+        Regression test for issue #92
+        """
+        cursor = connection.cursor()
+        cursor.execute("CREATE SCHEMA non_app_schema")
+
+        cursor.execute('CREATE TABLE [non_app_schema].[test_table_issue_92] (id INTEGER);')
+        tl = connection.introspection.table_names()
+        self.assertNotIn('test_table_issue_92', tl)
 
 def datatype(dbtype, description):
     """Helper to convert a data type into a string."""
