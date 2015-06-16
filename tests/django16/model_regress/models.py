@@ -82,3 +82,8 @@ class Model2(models.Model):
 
 class Model3(models.Model):
     model2 = models.ForeignKey(Model2, unique=True, to_field='model1')
+
+
+class Slicer(models.Model):
+    field1 = models.IntegerField()
+    field2 = models.IntegerField()

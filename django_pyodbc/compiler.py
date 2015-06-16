@@ -345,14 +345,29 @@ class SQLCompiler(compiler.SQLCompiler):
                 paren_buf[paren_depth] += '(%(' + key + ')s)'
             else:
                 paren_buf[paren_depth] += ch
-    
+
         def _replace_sub(col):
             """Replace all placeholders with expanded values"""
             while _re_col_placeholder.search(col):
                 col = col.format(**parens)
             return col
-    
+
         temp_sql = ''.join(paren_buf)
+
+        # replace any bare %s with placeholders.  Needed when the WHERE
+        # clause only contains one condition, and isn't wrapped in parens.
+        # the placeholder_data is used to prevent the variable "i" from
+        # being interpreted as a local variable in the replacement function
+        placeholder_data = { "i": i }
+        def _alias_placeholders(val):
+            i = placeholder_data["i"]
+            i += 1
+            placeholder_data["i"] = i
+            key = "_placeholder_{0}".format(i)
+            parens[key] = "%s"
+            return "%(" + key + ")s"
+
+        temp_sql = re.sub("%s", _alias_placeholders, temp_sql)
     
         select_list, from_clause = _break(temp_sql, ' FROM ' + self.connection.ops.left_sql_quote)
             

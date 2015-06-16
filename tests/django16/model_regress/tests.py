@@ -13,7 +13,7 @@ from django.db import connection, router
 from django.db.models.sql import InsertQuery
 
 from .models import (Worker, Article, Party, Event, Department,
-    BrokenUnicodeMethod, NonAutoPK, Model1, Model2, Model3)
+    BrokenUnicodeMethod, NonAutoPK, Model1, Model2, Model3, Slicer)
 
 
 class ModelTests(TestCase):
@@ -30,6 +30,21 @@ class ModelTests(TestCase):
         Regression test for #10153: foreign key __lte lookups.
         """
         Worker.objects.filter(department__lte=0)
+
+    def test_slices(self):
+        """
+        Regression test for issue #90 - using slices breaks placeholders.
+        """
+
+        Slicer.objects.create(field1=4, field2=3)
+        Slicer.objects.create(field1=4, field2=3)
+        Slicer.objects.create(field1=4, field2=3)
+        Slicer.objects.create(field1=4, field2=3)
+        v1 = Slicer.objects.filter(field1=4, field2=3)[1:2]
+        v2 = Slicer.objects.filter(field1=4)[1:2]
+        list(v1)
+        # This was the trigger for the behavior in #90
+        list(v2)
 
     def test_sql_insert_compiler_return_id_attribute(self):
         """
