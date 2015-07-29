@@ -1,4 +1,8 @@
-from django.db.backends import BaseDatabaseIntrospection
+try:
+    from django.db.backends.base.introspection import BaseDatabaseIntrospection
+except:
+    # import location prior to Django 1.8
+    from django.db.backends import BaseDatabaseIntrospection
 import pyodbc as Database
 
 SQL_AUTOFIELD = -777555
