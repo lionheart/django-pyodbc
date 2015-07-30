@@ -7,7 +7,12 @@ except:
     pytz = None
 
 from django.conf import settings
-from django.db.backends import BaseDatabaseOperations
+try:
+    from django.db.backends.base.operations import BaseDatabaseOperations
+except ImportError:
+    # import location prior to Django 1.8
+    from django.db.backends import BaseDatabaseOperations
+    
 
 from django_pyodbc.compat import smart_text, string_types, timezone
 
@@ -201,7 +206,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         """
         return cursor.fetchone()[0]
 
-    def lookup_cast(self, lookup_type):
+    def lookup_cast(self, lookup_type, internal_type=None):
         if lookup_type in ('iexact', 'icontains', 'istartswith', 'iendswith'):
             return "UPPER(%s)"
         return "%s"

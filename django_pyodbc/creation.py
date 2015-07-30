@@ -1,7 +1,12 @@
 import base64
 import random
 
-from django.db.backends.creation import BaseDatabaseCreation
+try:
+    from django.db.backends.base.creation import BaseDatabaseCreation
+except ImportError:
+    # import location prior to Django 1.8
+    from django.db.backends.creation import BaseDatabaseCreation
+    
 
 from django_pyodbc.compat import b, md5_constructor
 
@@ -68,7 +73,11 @@ class DatabaseCreation(BaseDatabaseCreation):
             if settings_dict['TEST_NAME']:
                 test_name = settings_dict['TEST_NAME']
             else:
-                from django.db.backends.creation import TEST_DATABASE_PREFIX
+                try:
+                    from django.db.backends.base.creation import TEST_DATABASE_PREFIX
+                except ImportError:
+                    # import location prior to Django 1.8
+                    from django.db.backends.creation import TEST_DATABASE_PREFIX
                 test_name = TEST_DATABASE_PREFIX + settings_dict['NAME']
         if self.connection._DJANGO_VERSION >= 17:
             settings_dict['TEST']['NAME'] = test_name

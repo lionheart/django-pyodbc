@@ -23,11 +23,20 @@ if pyodbc_ver < (2, 0, 38, 9999):
     raise ImproperlyConfigured("pyodbc 2.0.38 or newer is required; you have %s" % Database.version)
 
 from django.db import utils
-from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDatabaseValidation
+try:
+    from django.db.backends.base.base import BaseDatabaseWrapper
+    from django.db.backends.base.features import  BaseDatabaseFeatures
+    from django.db.backends.base.validation import BaseDatabaseValidation
+except ImportError:
+    # import location prior to Django 1.8
+    from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDatabaseValidation
 from django.db.backends.signals import connection_created
+    
 from django.conf import settings
 from django import VERSION as DjangoVersion
-if DjangoVersion[:2] == (1, 7):
+if DjangoVersion[:2] == (1, 8):
+    _DJANGO_VERSION = 18
+elif DjangoVersion[:2] == (1, 7):
     _DJANGO_VERSION = 17
 elif DjangoVersion[:2] == (1, 6):
     _DJANGO_VERSION = 16

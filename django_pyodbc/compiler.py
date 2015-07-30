@@ -2,6 +2,7 @@ import re
 from django.db.models.sql import compiler
 import django
 from datetime import datetime
+from django import VERSION as DjangoVersion
 
 from django_pyodbc.compat import zip_longest
 
@@ -604,8 +605,31 @@ class SQLAggregateCompiler(compiler.SQLAggregateCompiler, SQLCompiler):
         self._fix_aggregates()
         return super(SQLAggregateCompiler, self).as_sql(qn=qn)
 
-class SQLDateCompiler(compiler.SQLDateCompiler, SQLCompiler):
-    pass
+# django's compiler.SQLDateCompiler was removed in 1.8
+if DjangoVersion[0] >= 1 and DjangoVersion[1] >= 8:
+    
+    import warnings
+    
+    class DeprecatedMeta(type):
+        def __new__(cls, name, bases, attrs):
+            # if the metaclass is defined on the current class, it's not
+            # a subclass so we don't want to warn.
+            if attrs.get('__metaclass__') is not cls:
+                msg = ('In the 1.8 release of django, `SQLDateCompiler` was ' +
+                    'removed.  This was a parent class of `' + name + 
+                    '`, and thus `' + name + '` needs to be changed.')
+                raise ImportError(msg)
+            return super(DeprecatedMeta, cls).__new__(cls, name, bases, attrs)
 
-class SQLDateTimeCompiler(compiler.SQLDateCompiler, SQLCompiler):
-    pass
+    class SQLDateCompiler(object):
+        __metaclass__ = DeprecatedMeta
+
+    class SQLDateTimeCompiler(object):
+        __metaclass__ = DeprecatedMeta
+    
+else:
+    class SQLDateCompiler(compiler.SQLDateCompiler, SQLCompiler):
+        pass
+
+    class SQLDateTimeCompiler(compiler.SQLDateCompiler, SQLCompiler):
+        pass
