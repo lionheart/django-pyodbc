@@ -115,20 +115,26 @@ class SQLCompiler(compiler.SQLCompiler):
         E.g. AVG([1, 2]) needs to yield 1.5, not 1
         """
         for alias, aggregate in self.query.aggregate_select.items():
-            if aggregate.sql_function == 'AVG':# and self.connection.cast_avg_to_float:
+
+            try:
+                sql_function = aggregate.sql_function  # Django 1.7 and below
+            except AttributeError:
+                sql_function = aggregate.function  # Django 1.8+
+
+            if sql_function == 'AVG':# and self.connection.cast_avg_to_float:
                 # Embed the CAST in the template on this query to
                 # maintain multi-db support.
                 self.query.aggregate_select[alias].sql_template = \
                     '%(function)s(CAST(%(field)s AS FLOAT))'
             # translate StdDev function names
-            elif aggregate.sql_function == 'STDDEV_SAMP':
+            elif sql_function == 'STDDEV_SAMP':
                 self.query.aggregate_select[alias].sql_function = 'STDEV'
-            elif aggregate.sql_function == 'STDDEV_POP':
+            elif sql_function == 'STDDEV_POP':
                 self.query.aggregate_select[alias].sql_function = 'STDEVP'
             # translate Variance function names
-            elif aggregate.sql_function == 'VAR_SAMP':
+            elif sql_function == 'VAR_SAMP':
                 self.query.aggregate_select[alias].sql_function = 'VAR'
-            elif aggregate.sql_function == 'VAR_POP':
+            elif sql_function == 'VAR_POP':
                 self.query.aggregate_select[alias].sql_function = 'VARP'
 
     def as_sql(self, with_limits=True, with_col_aliases=False):
