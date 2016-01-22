@@ -157,7 +157,7 @@ class SQLCompiler(compiler.SQLCompiler):
 
         raw_sql, fields = super(SQLCompiler, self).as_sql(False, with_col_aliases)
 
-        if self.query.order_by and self.connection.ops.sql_server_ver >= 2012 and not self.connection.ops.is_db2:
+        if self.connection.ops.sql_server_ver >= 2012 and not self.connection.ops.is_db2:
             sql = "%s OFFSET %s ROWS" % (raw_sql, self.query.low_mark)
             if self.query.high_mark:
                 next_count = self.query.high_mark - self.query.low_mark
