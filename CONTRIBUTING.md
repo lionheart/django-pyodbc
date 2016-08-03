@@ -43,13 +43,12 @@ When You provide a Contribution to a Project:
 
 Furthermore:
 
-* You assert that You have the authority and are able to enter into this
-  Agreement.
+* You assert that You have the authority and are able to enter into this Agreement.
 
-* If You become aware of a problem with any of Your Contributions or
-  with the fact that You have signed this Agreement, then You agree to
-  inform Lionheart about the problem, without any undue
-  delay.
+* If You become aware of a problem with any of Your Contributions or with the fact that You have signed this Agreement, then You agree to inform Lionheart about the problem, without any undue delay.
 
 To the extent possible under law, Lionheart has dedicated all copyright and related and neighboring rights to the text of this license to the public domain worldwide. This software is distributed without any warranty. See <http://creativecommons.org/publicdomain/zero/1.0/>.
 
+---
+
+This CLA was copied with modifications from https://github.com/Medium/opensource/blob/master/cla-2.0.md.
