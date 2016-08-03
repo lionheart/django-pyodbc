@@ -256,6 +256,10 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 if port_str:
                     host_str += ';PORT=%s' % port_str
                 cstr_parts.append('SERVER=%s' % host_str)
+            elif self.ops.is_openedge:
+                if port_str:
+                    host_str += ';PortNumber=%s' % port_str
+                cstr_parts.append('HostName=%s' % host_str)
             else:
                 cstr_parts.append('SERVERNAME=%s' % host_str)
 
@@ -275,6 +279,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         if 'extra_params' in options:
             cstr_parts.append(options['extra_params'])
         connectionstring = ';'.join(cstr_parts)
+        print(connectionstring)
         return connectionstring
 
     def _cursor(self):
@@ -303,7 +308,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             # Django convention for the 'week_day' Django lookup) if the user
             # hasn't told us otherwise
 
-            if not self.ops.is_db2:
+            if not self.ops.is_db2 and not self.ops.is_openedge:
                 # IBM's DB2 doesn't support this syntax and a suitable
                 # equivalent could not be found.
                 cursor.execute("SET DATEFORMAT ymd; SET DATEFIRST %s" % self.datefirst)

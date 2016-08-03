@@ -30,6 +30,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         self._ss_ver = None
         self._ss_edition = None
         self._is_db2 = None
+        self._is_openedge = None
         
     @property
     def is_db2(self):
@@ -42,11 +43,20 @@ class DatabaseOperations(BaseDatabaseOperations):
                 self._is_db2 = False
 
         return self._is_db2
+
+    @property
+    def is_openedge(self):
+        if self._is_openedge is None:
+            options = self.connection.settings_dict.get('OPTIONS', {})
+            self._is_openedge = 'openedge' in options and options['openedge']
+        return self._is_openedge
     
     @property
     def left_sql_quote(self):
         if self.is_db2:
             return '{'
+        elif self.is_openedge:
+            return '"'
         else:
             return '['
     
@@ -54,6 +64,8 @@ class DatabaseOperations(BaseDatabaseOperations):
     def right_sql_quote(self):
         if self.is_db2:
             return '}'
+        elif self.is_openedge:
+            return '"'
         else:
             return ']'
 
@@ -65,10 +77,12 @@ class DatabaseOperations(BaseDatabaseOperations):
             return self._ss_ver
         cur = self.connection.cursor()
         ver_code = None
-        if not self.is_db2:
+        if not self.is_db2 and not self.is_openedge:
             cur.execute("SELECT CAST(SERVERPROPERTY('ProductVersion') as varchar)")
             ver_code = cur.fetchone()[0]
             ver_code = int(ver_code.split('.')[0])
+        else:
+            ver_code = 0
         if ver_code >= 11:
             self._ss_ver = 2012
         elif ver_code == 10:
