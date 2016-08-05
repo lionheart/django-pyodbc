@@ -149,7 +149,7 @@ To run the test suite:
 License
 -------
 
-See `LICENSE <LICENSE>`_.
+This project originally started life as django-sql-server. This project was abandoned in 2011 and was brought back to life as django-pyodbc by our team in 2013. In the process, most of the project was refactored and brought up to speed with modern Django best practices. The work done prior to the 2013 rewrite is licensed under BSD (3-Clause). Improvements since then are licensed under Apache 2.0. See `LICENSE <LICENSE>`_ for more details.
 
 Credits
 -------
