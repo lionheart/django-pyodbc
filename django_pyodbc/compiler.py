@@ -157,6 +157,8 @@ class SQLCompiler(compiler.SQLCompiler):
         E.g. AVG([1, 2]) needs to yield 1.5, not 1
         """
         for alias, aggregate in self.query.aggregate_select.items():
+            if not hasattr(aggregate, 'sql_function'):
+                return
             if aggregate.sql_function == 'AVG':# and self.connection.cast_avg_to_float:
                 # Embed the CAST in the template on this query to
                 # maintain multi-db support.
