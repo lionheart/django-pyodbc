@@ -158,7 +158,7 @@ class SQLCompiler(compiler.SQLCompiler):
         """
         for alias, aggregate in self.query.aggregate_select.items():
             if not hasattr(aggregate, 'sql_function'):
-                return
+                continue
             if aggregate.sql_function == 'AVG':# and self.connection.cast_avg_to_float:
                 # Embed the CAST in the template on this query to
                 # maintain multi-db support.
