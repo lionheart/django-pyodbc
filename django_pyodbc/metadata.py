@@ -40,7 +40,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __maintainer__ = "Dan Loewenherz"
 __maintainer_email__ = "dan@lionheartsw.com"
 __license__ = "License :: OSI Approved :: BSD License"
