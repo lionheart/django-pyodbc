@@ -279,7 +279,6 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         if 'extra_params' in options:
             cstr_parts.append(options['extra_params'])
         connectionstring = ';'.join(cstr_parts)
-        print(connectionstring)
         return connectionstring
 
     def _cursor(self):
