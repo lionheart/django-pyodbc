@@ -41,9 +41,9 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
-from django.db.models.sql import compiler
+from django.db.models.sql import compiler, where
 import django
-from datetime import datetime
+from datetime import datetime, date
 from django import VERSION as DjangoVersion
 
 from django_pyodbc.compat import zip_longest
@@ -99,6 +99,8 @@ _re_col_placeholder = re.compile(r'\{_placeholder_(\d+)\}')
 
 _re_find_order_direction = re.compile(r'\s+(asc|desc)\s*$', re.IGNORECASE)
 
+_re_date = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})$')
+
 def _remove_order_limit_offset(sql):
     return _re_order_limit_offset.sub('',sql).split(None, 1)[1]
 
@@ -127,6 +129,25 @@ class SQLCompiler(compiler.SQLCompiler):
             r"\{left_sql_quote}([^\{left_sql_quote}]+)\{right_sql_quote}$".format(
                 left_sql_quote=self.connection.ops.left_sql_quote,
                 right_sql_quote=self.connection.ops.right_sql_quote))
+
+    def compile(self, node, select_format=False):
+        retVal = super(SQLCompiler, self).compile(node, select_format)
+        if self.connection.ops.is_openedge and type(node) is where.WhereNode:
+            idx = 0
+            for val in retVal[1]:
+                if type(val) == str:
+                    # Using a regex here to reduce the possibility of catching non date input.
+                    # If there are more edgecases like this it should probably be moved somewhere else
+                    match = _re_date.match(val)
+                    if match:
+                        if type(node.children[idx].rhs) == date:
+                            retVal[1][idx] = node.children[idx].rhs
+                        elif type(node.children[idx].lhs) == date:
+                            retVal[1][idx] = node.children[idx].lhs
+                        else:
+                            retval[1][idx] = date(match.group(1), match.group(2), match.group(3))
+                idx += 1
+        return retVal
 
 
     def resolve_columns(self, row, fields=()):
