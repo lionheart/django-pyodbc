@@ -94,6 +94,8 @@ class SQLCompiler(compiler.SQLCompiler):
             idx = 0
             for val in retVal[1]:
                 if type(val) == str:
+                    # Using a regex here to reduce the possibility of catching non date input.
+                    # If there are more edgecases like this it should probably be moved somewhere else
                     match = _re_date.match(val)
                     if match:
                         if type(node.children[idx].rhs) == date:
