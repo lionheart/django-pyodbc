@@ -43,6 +43,7 @@
 import re
 from django.db.models.sql import compiler, where
 import django
+import types
 from datetime import datetime, date
 from django import VERSION as DjangoVersion
 
@@ -99,8 +100,6 @@ _re_col_placeholder = re.compile(r'\{_placeholder_(\d+)\}')
 
 _re_find_order_direction = re.compile(r'\s+(asc|desc)\s*$', re.IGNORECASE)
 
-_re_date = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})$')
-
 def _remove_order_limit_offset(sql):
     return _re_order_limit_offset.sub('',sql).split(None, 1)[1]
 
@@ -112,6 +111,15 @@ def _break(s, find):
 
 def _get_order_limit_offset(sql):
     return _re_order_limit_offset.search(sql).groups()
+
+def where_date(self, compiler, connection):
+    query, data = self.as_sql(compiler, connection)
+    if len(data) != 1:
+        raise Error('Multiple data items in date condition') # I don't think this can happen but I'm adding an exception just in case
+    if type(self.rhs) == date:
+        return [query, [self.rhs]]
+    elif type(self.lhs) == date:
+        return [query, [self.lhs]]
 
 class SQLCompiler(compiler.SQLCompiler):
     def __init__(self,*args,**kwargs):
@@ -131,24 +139,13 @@ class SQLCompiler(compiler.SQLCompiler):
                 right_sql_quote=self.connection.ops.right_sql_quote))
 
     def compile(self, node, select_format=False):
-        retVal = super(SQLCompiler, self).compile(node, select_format)
         if self.connection.ops.is_openedge and type(node) is where.WhereNode:
-            idx = 0
-            for val in retVal[1]:
-                if type(val) == str:
-                    # Using a regex here to reduce the possibility of catching non date input.
-                    # If there are more edgecases like this it should probably be moved somewhere else
-                    match = _re_date.match(val)
-                    if match:
-                        if type(node.children[idx].rhs) == date:
-                            retVal[1][idx] = node.children[idx].rhs
-                        elif type(node.children[idx].lhs) == date:
-                            retVal[1][idx] = node.children[idx].lhs
-                        else:
-                            retval[1][idx] = date(match.group(1), match.group(2), match.group(3))
-                idx += 1
-        return retVal
+            for val in node.children:
+                # If we too many more of these special cases we should probably move them to another file
+                if type(val.rhs) == date or type(val.lhs) == date:
+                    setattr(val, 'as_microsoft', types.MethodType(where_date, val))
 
+        return super(SQLCompiler, self).compile(node, select_format)
 
     def resolve_columns(self, row, fields=()):
         # If the results are sliced, the resultset will have an initial
