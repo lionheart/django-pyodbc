@@ -59,7 +59,7 @@ setup(
     maintainer=metadata['__maintainer__'],
     maintainer_email=metadata['__maintainer_email__'],
     description="Django 1.5-1.10 SQL Server backend using pyodbc.",
-    url='https://github.com/lionheartsw/django-pyodbc',
+    url='https://github.com/lionheart/django-pyodbc',
     package_data={'': ['LICENSE', 'README.rst']},
     packages=[
         'django_pyodbc',
