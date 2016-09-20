@@ -165,7 +165,7 @@ Credits
 * `Paul Tax <https://github.com/tax>`_
 * `Ramiro Morales <http://djangopeople.net/ramiro/>`_
 * `Wei guangjing <http://djangopeople.net/vcc/>`_
-* `mamcx <http://code.djangoproject.com/ticket/5062 "For the first implementation using pymssql.">`_
+* `mamcx <http://code.djangoproject.com/ticket/5062>`_ "For the first implementation using pymssql."
 
 From the original project README.
 
