@@ -41,10 +41,10 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 try:
-    from django.db.backends.base.introspection import BaseDatabaseIntrospection
+    from django.db.backends.base.introspection import BaseDatabaseIntrospection, TableInfo
 except:
     # import location prior to Django 1.8
-    from django.db.backends import BaseDatabaseIntrospection
+    from django.db.backends import BaseDatabaseIntrospection, TableInfo
 import pyodbc as Database
 
 SQL_AUTOFIELD = -777555
