@@ -133,6 +133,11 @@ Standard Django settings
 
     Boolean.  This will trigger support for Progress Openedge
     
+* ``left_sql_quote`` , ``right_sql_quote``
+
+    String.  Specifies the string to be inserted for left and right quoting of SQL identifiers respectively.  Only set these if django-pyodbc isn't guessing the correct quoting for your system.  
+    
+    
 OpenEdge Support
 ~~~~~~~~~~~~~~~~~~~~~~~~
 For OpenEdge support make sure you supply both the deiver and the openedge extra options, all other parameters should work the same
