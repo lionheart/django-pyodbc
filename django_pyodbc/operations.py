@@ -73,6 +73,8 @@ class DatabaseOperations(BaseDatabaseOperations):
         self._ss_edition = None
         self._is_db2 = None
         self._is_openedge = None
+        self._left_sql_quote = None
+        self._right_sql_quote = None
 
     @property
     def is_db2(self):
@@ -90,26 +92,38 @@ class DatabaseOperations(BaseDatabaseOperations):
     def is_openedge(self):
         if self._is_openedge is None:
             options = self.connection.settings_dict.get('OPTIONS', {})
-            self._is_openedge = 'openedge' in options and options['openedge']
+            self._is_openedge = options.get('openedge', False)
         return self._is_openedge
 
     @property
     def left_sql_quote(self):
-        if self.is_db2:
-            return '{'
-        elif self.is_openedge:
-            return '"'
-        else:
-            return '['
+        if self._left_sql_quote is None:
+            options = self.connection.settings_dict.get('OPTIONS', {})
+            q = options.get('left_sql_quote', None)
+            if q is not None:
+                self._left_sql_quote = q
+            elif self.is_db2:
+                self._left_sql_quote = '{'
+            elif self.is_openedge:
+                self._left_sql_quote = '"'
+            else:
+                self._left_sql_quote = '['
+        return self._left_sql_quote
 
     @property
     def right_sql_quote(self):
-        if self.is_db2:
-            return '}'
-        elif self.is_openedge:
-            return '"'
-        else:
-            return ']'
+        if self._right_sql_quote is None:
+            options = self.connection.settings_dict.get('OPTIONS', {})
+            q = options.get('right_sql_quote', None)
+            if q is not None:
+                self._right_sql_quote = q
+            elif self.is_db2: 
+                self._right_sql_quote = '}'
+            elif self.is_openedge:
+                self._right_sql_quote = '"'
+            else:
+                self._right_sql_quote = ']'
+        return self._right_sql_quote
 
     def _get_sql_server_ver(self):
         """
