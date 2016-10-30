@@ -42,9 +42,14 @@
 
 try:
     from django.db.backends.base.introspection import BaseDatabaseIntrospection, TableInfo
-except:
-    # import location prior to Django 1.8
-    from django.db.backends import BaseDatabaseIntrospection, TableInfo
+except ImportError:
+    # Import location prior to Django 1.8
+    from django.db.backends import BaseDatabaseIntrospection
+
+    row_to_table_info = lambda row: row[0]
+else:
+    row_to_table_info = lambda row: TableInfo(row[0].lower(), row[1])
+
 import pyodbc as Database
 
 SQL_AUTOFIELD = -777555
@@ -83,14 +88,13 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         Returns a list of table names in the current database.
         """
         # TABLES: http://msdn2.microsoft.com/en-us/library/ms186224.aspx
+        # TODO: Believe the below queries should actually select `TABLE_NAME, TABLE_TYPE`
         if cursor.db.limit_table_list:
             cursor.execute("SELECT TABLE_NAME, 't' FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = 'dbo'")
         else:
             cursor.execute("SELECT TABLE_NAME, 't' FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'")
-        return [TableInfo(row[0].lower(), row[1]) for row in cursor.fetchall()]
 
-        # Or pyodbc specific:
-        #return [row[2] for row in cursor.tables(tableType='TABLE')]
+        return [row_to_table_info(row) for row in cursor.fetchall()]
 
     def _is_auto_field(self, cursor, table_name, column_name):
         """
