@@ -145,7 +145,10 @@ class SQLCompiler(compiler.SQLCompiler):
                 if type(val.rhs) == date or type(val.lhs) == date:
                     setattr(val, 'as_microsoft', types.MethodType(where_date, val))
 
-        return super(SQLCompiler, self).compile(node, select_format)
+        args = [node]
+        if select_format:
+            args.append(select_format)
+        return super(SQLCompiler, self).compile(*args)
 
     def resolve_columns(self, row, fields=()):
         # If the results are sliced, the resultset will have an initial
