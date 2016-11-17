@@ -174,6 +174,10 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         # TODO: freetext, full-text contains...
     }
 
+    # In Django 1.8 data_types was moved from DatabaseCreation to DatabaseWrapper.
+    # See https://docs.djangoproject.com/en/1.10/releases/1.8/#database-backend-api
+    data_types = DatabaseCreation.data_types
+
     def __init__(self, *args, **kwargs):
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
 
@@ -357,6 +361,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 cursor.execute("SET DATEFORMAT ymd; SET DATEFIRST %s" % self.datefirst)
             if self.ops.sql_server_ver < 2005:
                 self.creation.data_types['TextField'] = 'ntext'
+                self.data_types['TextField'] = 'ntext'
                 self.features.can_return_id_from_insert = False
 
             ms_sqlncli = re.compile('^((LIB)?SQLN?CLI|LIBMSODBCSQL)')
