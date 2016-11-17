@@ -39,7 +39,7 @@ Installation
    .. code:: python
 
       pip install django-pyodbc
-
+      
 2. Now you can now add a database to your settings using standard ODBC parameters.
 
    .. code:: python
@@ -57,7 +57,22 @@ Installation
          }
       }
 
-3. That's it! You're done.
+3. That's it! You're done.*
+
+   \* *You may need to configure your machine and drivers to do an*
+   `ODBC <https://en.wikipedia.org/wiki/Open_Database_Connectivity>`_
+   *connection to your database server, if you haven't already.  For Linux this
+   involves installing and*
+   `configuring Unix ODBC and FreeTDS <http://www.unixodbc.org/doc/FreeTDS.html>`_ .
+   *Iterate on the command line to test your*
+   `pyodbc <https://mkleehammer.github.io/pyodbc/>`_ *connection like:*
+
+   .. code:: python
+
+       python -c 'import pyodbc; print(pyodbc.connect("DSN=foobar_mssql_data_source_name;UID=foo;PWD=bar").cursor().execute("select 1"))'
+
+   *extended instructions* `here <https://github.com/lionheart/django-pyodbc/issues/10>`_
+
 
 Configuration
 -------------
