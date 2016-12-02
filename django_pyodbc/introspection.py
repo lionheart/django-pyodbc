@@ -90,9 +90,9 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         # TABLES: http://msdn2.microsoft.com/en-us/library/ms186224.aspx
         # TODO: Believe the below queries should actually select `TABLE_NAME, TABLE_TYPE`
         if cursor.db.limit_table_list:
-            cursor.execute("SELECT TABLE_NAME, 't' FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = 'dbo'")
+            cursor.execute("SELECT TABLE_NAME, 't' FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE IN ('VIEW', 'BASE TABLE') AND TABLE_SCHEMA = 'dbo'")
         else:
-            cursor.execute("SELECT TABLE_NAME, 't' FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'")
+            cursor.execute("SELECT TABLE_NAME, 't' FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE IN ('VIEW', 'BASE TABLE')")
 
         return [row_to_table_info(row) for row in cursor.fetchall()]
 
