@@ -1,10 +1,7 @@
 django-pyodbc
 =============
 
-|version|_   |downloads|_
-
-.. |downloads| image:: http://img.shields.io/pypi/dm/django-pyodbc.svg?style=flat
-.. _downloads: https://pypi.python.org/pypi/django-pyodbc
+|version|_ 
 
 .. |version| image:: http://img.shields.io/pypi/v/django-pyodbc.svg?style=flat
 .. _version: https://pypi.python.org/pypi/django-pyodbc
