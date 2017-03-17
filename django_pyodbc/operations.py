@@ -104,8 +104,8 @@ class DatabaseOperations(BaseDatabaseOperations):
                 self._left_sql_quote = q
             elif self.is_db2:
                 self._left_sql_quote = '{'
-            #elif self.is_openedge:
-            #    self._left_sql_quote = '"'
+            elif self.is_openedge:
+                self._left_sql_quote = '"'
             else:
                 self._left_sql_quote = '['
         return self._left_sql_quote
@@ -119,8 +119,8 @@ class DatabaseOperations(BaseDatabaseOperations):
                 self._right_sql_quote = q
             elif self.is_db2: 
                 self._right_sql_quote = '}'
-            #elif self.is_openedge:
-            #    self._right_sql_quote = '"'
+            elif self.is_openedge:
+                self._right_sql_quote = '"'
             else:
                 self._right_sql_quote = ']'
         return self._right_sql_quote
@@ -289,8 +289,10 @@ class DatabaseOperations(BaseDatabaseOperations):
         Returns a quoted version of the given table, index or column name. Does
         not quote the given name if it's already been quoted.
         """
-        if self.is_openedge:                                                                                                                                 
-            return name # Quoting not needed
+        if self.is_openedge and len(name.split('.')) > 1:
+            catalog, db_name = name.split('.')
+            return '%s%s%s.%s%s%s' %(self.left_sql_quote, catalog, self.right_sql_quote,
+                                     self.left_sql_quote, db_name, self.right_sql_quote)
         if name.startswith(self.left_sql_quote) and name.endswith(self.right_sql_quote):
             return name # Quoting once is enough.
         return '%s%s%s' % (self.left_sql_quote, name, self.right_sql_quote)
