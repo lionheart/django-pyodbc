@@ -483,6 +483,8 @@ class CursorWrapper(object):
     def execute(self, sql, params=()):
         self.last_sql = sql
         sql = self.format_sql(sql, len(params))
+        if sys.version.startswith('3') and type(sql) is not str:
+            sql = sql.decode(sys.stdout.encoding)
         params = self.format_params(params)
         self.last_params = params
         try:
