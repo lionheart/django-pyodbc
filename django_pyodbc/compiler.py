@@ -180,7 +180,7 @@ class SQLCompiler(compiler.SQLCompiler):
         try:
             # for django 1.10 and up (works starting in 1.8 so I am told)
             select = self.query.annotation_select
-        except AttributeError: 
+        except AttributeError:
             # older
             select = self.query.aggregate_select
 
@@ -203,10 +203,9 @@ class SQLCompiler(compiler.SQLCompiler):
             elif aggregate.sql_function == 'VAR_POP':
                 select[alias].sql_function = 'VARP'
 
-    def as_sql(self, with_limits=True, with_col_aliases=False, qn=None):
-        
+    def as_sql(self, with_limits=True, with_col_aliases=False, qn=None, **kwargs):
         self.pre_sql_setup()
-        
+
         # Django #12192 - Don't execute any DB query when QS slicing results in limit 0
         if with_limits and self.query.low_mark == self.query.high_mark:
             return '', ()
@@ -223,13 +222,13 @@ class SQLCompiler(compiler.SQLCompiler):
             # unless TOP or FOR XML is also specified.
             try:
                 setattr(self.query, '_mssql_ordering_not_allowed', with_col_aliases)
-                result = super(SQLCompiler, self).as_sql(with_limits, with_col_aliases)
+                result = super(SQLCompiler, self).as_sql(with_limits, with_col_aliases, **kwargs)
             finally:
                 # remove in case query is every reused
                 delattr(self.query, '_mssql_ordering_not_allowed')
             return result
 
-        raw_sql, fields = super(SQLCompiler, self).as_sql(False, with_col_aliases)
+        raw_sql, fields = super(SQLCompiler, self).as_sql(False, with_col_aliases, **kwargs)
 
         # Check for high mark only and replace with "TOP"
         if self.query.high_mark is not None and not self.query.low_mark:
