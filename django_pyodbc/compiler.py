@@ -604,6 +604,14 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
 
         has_fields = bool(self.query.fields)
         fields = self.query.fields if has_fields else [opts.pk]
+        # [msbrogli 2014-03-20] Remove primary key AutoField fields with value None.
+        # STARTS HERE
+        from django.db import models
+        fields = [
+                  f for f in fields
+                  if not (f.primary_key and isinstance(f, models.AutoField) and getattr(self.query.objs[0], f.attname) is None)
+                 ]
+        # ENDS HERE
         columns = [f.column for f in fields]
 
         result.append('(%s)' % ', '.join([qn(c) for c in columns]))
