@@ -178,7 +178,9 @@ class DatabaseOperations(BaseDatabaseOperations):
         """
         field_name = self.quote_name(field_name)
         if settings.USE_TZ:
-            if pytz is None:
+            try:
+                import pytz
+            except ImportError:
                 from django.core.exceptions import ImproperlyConfigured
                 raise ImproperlyConfigured("This query requires pytz, "
                                            "but it isn't installed.")
@@ -534,3 +536,14 @@ class DatabaseOperations(BaseDatabaseOperations):
         # Django #19096 - As of Django 1.5, can return None, None to bypass the
         # core's SQL mangling.
         return (None, None)
+
+    def datetime_extract_sql(self, lookup_type, field_name, tzname):
+        """
+        Given a lookup_type of 'year', 'month', 'day', 'hour', 'minute' or
+        'second', returns the SQL that extracts a value from the given
+        datetime field field_name, and a tuple of parameters.
+        """
+        field_name = self._switch_tz_offset_sql(field_name, tzname)
+        sql = self.date_extract_sql(lookup_type, field_name)
+        params = []
+        return sql, params
