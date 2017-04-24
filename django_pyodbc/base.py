@@ -454,6 +454,8 @@ class CursorWrapper(object):
         else:
             if '%s' in sql:
                 sql = sql.replace('%s', '?')
+        if sys.version.startswith('3') and type(sql) is not str:
+            sql = sql.decode(self.encoding or sys.stdout.encoding)
         return sql
 
     def format_params(self, params):
