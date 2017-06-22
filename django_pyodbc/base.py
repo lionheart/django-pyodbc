@@ -180,6 +180,13 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     # See https://docs.djangoproject.com/en/1.10/releases/1.8/#database-backend-api
     data_types = DatabaseCreation.data_types
 
+    client_class = DatabaseClient
+    creation_class = DatabaseCreation
+    features_class = DatabaseFeatures
+    introspection_class = DatabaseIntrospection
+    ops_class = DatabaseOperations
+    validation_class = BaseDatabaseValidation
+
     def __init__(self, *args, **kwargs):
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
 
@@ -206,13 +213,6 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 self.operators.update(ops)
 
         self.test_create = self.settings_dict.get('TEST_CREATE', True)
-
-        self.client_class = DatabaseClient
-        self.creation_class = DatabaseCreation
-        self.features_class = DatabaseFeatures
-        self.introspection_class = DatabaseIntrospection
-        self.ops_class = DatabaseOperations
-        self.validation_class = BaseDatabaseValidation
 
 
     def get_connection_params(self):
