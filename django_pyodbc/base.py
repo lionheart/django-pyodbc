@@ -76,6 +76,8 @@ from django.db.backends.signals import connection_created
 
 from django.conf import settings
 from django import VERSION as DjangoVersion
+if DjangoVersion[:2] == (1, 11):
+    _DJANGO_VERSION = 19  # 20?
 if DjangoVersion[:2] == (1, 10):
     _DJANGO_VERSION = 19
 elif DjangoVersion[:2] == (1, 9):
