@@ -207,16 +207,12 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
         self.test_create = self.settings_dict.get('TEST_CREATE', True)
 
-        if _DJANGO_VERSION >= 13:
-            self.features = DatabaseFeatures(self)
-        else:
-            self.features = DatabaseFeatures()
-        self.ops = DatabaseOperations(self)
-        self.client = DatabaseClient(self)
-        self.creation = DatabaseCreation(self)
-        self.introspection = DatabaseIntrospection(self)
-        self.validation = BaseDatabaseValidation(self)
-        self.connection = None
+        self.client_class = DatabaseClient
+        self.creation_class = DatabaseCreation
+        self.features_class = DatabaseFeatures
+        self.introspection_class = DatabaseIntrospection
+        self.ops_class = DatabaseOperations
+        self.validation_class = BaseDatabaseValidation
 
 
     def get_connection_params(self):
