@@ -289,6 +289,10 @@ class DatabaseOperations(BaseDatabaseOperations):
         Returns a quoted version of the given table, index or column name. Does
         not quote the given name if it's already been quoted.
         """
+        if self.is_openedge and len(name.split('.')) > 1:
+            catalog, db_name = name.split('.')
+            return '%s%s%s.%s%s%s' %(self.left_sql_quote, catalog, self.right_sql_quote,
+                                     self.left_sql_quote, db_name, self.right_sql_quote)
         if name.startswith(self.left_sql_quote) and name.endswith(self.right_sql_quote):
             return name # Quoting once is enough.
         return '%s%s%s' % (self.left_sql_quote, name, self.right_sql_quote)
