@@ -76,7 +76,11 @@ from django.db.backends.signals import connection_created
 
 from django.conf import settings
 from django import VERSION as DjangoVersion
-if DjangoVersion[:2] == (1, 10):
+if DjangoVersion[:2] == (2, 0):
+    _DJANGO_VERSION = 19  # hack
+elif DjangoVersion[:2] == (1, 11):
+    _DJANGO_VERSION = 19  # hack
+elif DjangoVersion[:2] == (1, 10):
     _DJANGO_VERSION = 19
 elif DjangoVersion[:2] == (1, 9):
     _DJANGO_VERSION = 19
@@ -178,6 +182,13 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     # See https://docs.djangoproject.com/en/1.10/releases/1.8/#database-backend-api
     data_types = DatabaseCreation.data_types
 
+    client_class = DatabaseClient
+    creation_class = DatabaseCreation
+    features_class = DatabaseFeatures
+    introspection_class = DatabaseIntrospection
+    ops_class = DatabaseOperations
+    validation_class = BaseDatabaseValidation
+
     def __init__(self, *args, **kwargs):
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
 
@@ -204,17 +215,6 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 self.operators.update(ops)
 
         self.test_create = self.settings_dict.get('TEST_CREATE', True)
-
-        if _DJANGO_VERSION >= 13:
-            self.features = DatabaseFeatures(self)
-        else:
-            self.features = DatabaseFeatures()
-        self.ops = DatabaseOperations(self)
-        self.client = DatabaseClient(self)
-        self.creation = DatabaseCreation(self)
-        self.introspection = DatabaseIntrospection(self)
-        self.validation = BaseDatabaseValidation(self)
-        self.connection = None
 
 
     def get_connection_params(self):
