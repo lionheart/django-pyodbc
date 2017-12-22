@@ -17,7 +17,6 @@
 
 import re
 import os
-from django_pyodbc import metadata
 
 try:
     from setuptools import setup
