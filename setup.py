@@ -16,14 +16,17 @@
 
 import re
 import os
+import sys
 from django_pyodbc import metadata
+
+open_kwargs = {'encoding': 'UTF-8'} if sys.version_info.major == 3 else {}
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
-with open(os.path.join(os.path.dirname(__file__), "README.rst")) as file:
+with open(os.path.join(os.path.dirname(__file__), "README.rst"), **open_kwargs) as file:
     long_description = file.read()
 
     id_regex = re.compile(r"<\#([\w-]+)>")
@@ -37,7 +40,7 @@ with open(os.path.join(os.path.dirname(__file__), "README.rst")) as file:
 
 metadata = {}
 metadata_file = "django_pyodbc/metadata.py"
-exec(compile(open(metadata_file).read(), metadata_file, 'exec'), metadata)
+exec(compile(open(metadata_file, **open_kwargs).read(), metadata_file, 'exec'), metadata)
 
 # http://pypi.python.org/pypi?:action=list_classifiers
 classifiers = [
