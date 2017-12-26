@@ -218,30 +218,25 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
 
     def get_connection_params(self):
+        params = {}
+
+        params["connection_string"] = self._get_connection_string()
         settings_dict = self.settings_dict
-        if not settings_dict['NAME']:
-            from django.core.exceptions import ImproperlyConfigured
-            raise ImproperlyConfigured(
-                "settings.DATABASES is improperly configured. "
-                "Please supply the NAME value.")
-        conn_params = {
-            'database': settings_dict['NAME'],
-        }
-        conn_params.update(settings_dict['OPTIONS'])
-        if 'autocommit' in conn_params:
-            del conn_params['autocommit']
-        if settings_dict['USER']:
-            conn_params['user'] = settings_dict['USER']
-        if settings_dict['PASSWORD']:
-            conn_params['password'] = settings_dict['PASSWORD']
-        if settings_dict['HOST']:
-            conn_params['host'] = settings_dict['HOST']
-        if settings_dict['PORT']:
-            conn_params['port'] = settings_dict['PORT']
-        return conn_params
+        options = settings_dict['OPTIONS']
+        autocommit = options.get('autocommit', False)
+        params["autocommit"] = autocommit
+
+        return params
 
     def get_new_connection(self, conn_params):
-        return Database.connect(**conn_params)
+        connstr = conn_params["connection_string"]
+        autocommit = conn_params.get('autocommit', False)
+
+        if self.unicode_results:
+            return Database.connect(connstr, autocommit=autocommit,
+                                    unicode_results='True')
+        else:
+            return Database.connect(connstr, autocommit=autocommit)
 
     def init_connection_state(self):
         pass
@@ -336,16 +331,9 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
         if self.connection is None:
             new_conn = True
-            connstr = self._get_connection_string()#';'.join(cstr_parts)
-            options = settings_dict['OPTIONS']
-            autocommit = options.get('autocommit', False)
-            if self.unicode_results:
-                self.connection = Database.connect(connstr, \
-                        autocommit=autocommit, \
-                        unicode_results='True')
-            else:
-                self.connection = Database.connect(connstr, \
-                        autocommit=autocommit)
+            params = self.get_connection_params()
+
+            self.connection = self.get_new_connection(params)
             connection_created.send(sender=self.__class__, connection=self)
 
         cursor = self.connection.cursor()
