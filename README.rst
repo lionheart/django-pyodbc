@@ -27,7 +27,7 @@ Features
 
 TODO
 --------
-* [ ] Python 3 support. See [#47](https://github.com/lionheart/django-pyodbc/issues/47) for details.
+* [ ] Python 3 support. See `#47 <https://github.com/lionheart/django-pyodbc/issues/47>`_ for details.
 
 Installation
 ------------
