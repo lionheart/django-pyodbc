@@ -203,7 +203,10 @@ class SQLCompiler(compiler.SQLCompiler):
             elif aggregate.sql_function == 'VAR_POP':
                 select[alias].sql_function = 'VARP'
 
-    def as_sql(self, with_limits=True, with_col_aliases=False):
+    def as_sql(self, with_limits=True, with_col_aliases=False, qn=None):
+        
+        self.pre_sql_setup()
+        
         # Django #12192 - Don't execute any DB query when QS slicing results in limit 0
         if with_limits and self.query.low_mark == self.query.high_mark:
             return '', ()
@@ -675,10 +678,10 @@ class SQLUpdateCompiler(compiler.SQLUpdateCompiler, SQLCompiler):
 class SQLAggregateCompiler(compiler.SQLAggregateCompiler, SQLCompiler):
     def as_sql(self, qn=None):
         self._fix_aggregates()
-        return super(SQLAggregateCompiler, self).as_sql(qn=qn)
+        return super(SQLAggregateCompiler, self).as_sql()
 
 # django's compiler.SQLDateCompiler was removed in 1.8
-if DjangoVersion[0] >= 1 and DjangoVersion[1] >= 8:
+if DjangoVersion[0] > 1 or DjangoVersion[0] == 1 and DjangoVersion[1] >= 8:
 
     import warnings
 
