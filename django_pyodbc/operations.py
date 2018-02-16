@@ -80,13 +80,8 @@ class DatabaseOperations(BaseDatabaseOperations):
     @property
     def is_db2(self):
         if self._is_db2 is None:
-            cur = self.connection.cursor()
-            try:
-                cur.execute("SELECT * FROM SYSIBM.COLUMNS FETCH FIRST 1 ROWS ONLY")
-                self._is_db2 = True
-            except Exception:
-                self._is_db2 = False
-
+            options = self.connection.settings_dict.get('OPTIONS', {})
+            self._is_db2 = options.get('is_db2', False)
         return self._is_db2
 
     @property
@@ -433,7 +428,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         """
         return x
 
-    def value_to_db_datetime(self, value):
+    def adapt_datetimefield_value(self, value):
         """
         Transform a datetime value to an object compatible with what is expected
         by the backend driver for datetime columns.
@@ -448,7 +443,7 @@ class DatabaseOperations(BaseDatabaseOperations):
             value = value.replace(microsecond=0)
         return value
 
-    def value_to_db_time(self, value):
+    def adapt_timefield_value(self, value):
         """
         Transform a time value to an object compatible with what is expected
         by the backend driver for time columns.
@@ -472,7 +467,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         last = '%s-12-31 23:59:59'
         return [first % value, last % value]
 
-    def value_to_db_decimal(self, value, max_digits, decimal_places):
+    def adapt_decimalfield_value(self, value, max_digits, decimal_places):
         """
         Transform a decimal.Decimal value to an object compatible with what is
         expected by the backend driver for decimal (numeric) columns.
