@@ -191,12 +191,13 @@ Credits
 * `Alex Vidal <https://github.com/avidal>`_
 * `Dan Loewenherz <http://dlo.me>`_
 * `Filip Wasilewski <http://code.djangoproject.com/ticket/5246 "For his pioneering work, proving this was possible and profusely documenting the code with links to relevant vendor technical articles.">`_
+* `mamcx <http://code.djangoproject.com/ticket/5062>`_ "For the first implementation using pymssql."
 * `Michael Manfre <https://github.com/manfre>`_
 * `Michiya Takahashi <https://github.com/michiya>`_
 * `Paul Tax <https://github.com/tax>`_
 * `Ramiro Morales <http://djangopeople.net/ramiro/>`_
+* `Ross Rogers <https://github.com/RossRogers>`_
 * `Wei guangjing <http://djangopeople.net/vcc/>`_
-* `mamcx <http://code.djangoproject.com/ticket/5062>`_ "For the first implementation using pymssql."
 
 From the original project README.
 
