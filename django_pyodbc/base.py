@@ -49,7 +49,17 @@ import re
 import sys
 import warnings
 
+from django import VERSION as DjangoVersion
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.db import utils
+from django.db.backends.signals import connection_created
+
+from django_pyodbc.client import DatabaseClient
+from django_pyodbc.compat import binary_type, text_type, timezone
+from django_pyodbc.creation import DatabaseCreation
+from django_pyodbc.introspection import DatabaseIntrospection
+from django_pyodbc.operations import DatabaseOperations
 
 try:
     import pyodbc as Database
@@ -64,7 +74,6 @@ pyodbc_ver = tuple(map(int, vlist))
 if pyodbc_ver < (2, 0, 38, 9999):
     raise ImproperlyConfigured("pyodbc 2.0.38 or newer is required; you have %s" % Database.version)
 
-from django.db import utils
 try:
     from django.db.backends.base.base import BaseDatabaseWrapper
     from django.db.backends.base.features import  BaseDatabaseFeatures
@@ -72,26 +81,18 @@ try:
 except ImportError:
     # import location prior to Django 1.8
     from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDatabaseValidation
-from django.db.backends.signals import connection_created
 
-from django.conf import settings
-from django import VERSION as DjangoVersion
 if DjangoVersion[:2] == (2, 0):
     _DJANGO_VERSION = 20
 else:
     if DjangoVersion[0] == 1:
-        raise ImproperlyConfigured("Django %d.%d " % DjangoVersion[:2] + 
+        raise ImproperlyConfigured("Django %d.%d " % DjangoVersion[:2] +
             "is not supported on 2.+ versions of django-pyodbc.  Please look " +
             "into the 1.x versions of django-pyodbc to see if your 1.x " +
             "version of Django is supported by django-pyodbc")
     else:
         raise ImproperlyConfigured("Django %d.%d is not supported." % DjangoVersion[:2])
 
-from django_pyodbc.operations import DatabaseOperations
-from django_pyodbc.client import DatabaseClient
-from django_pyodbc.compat import binary_type, text_type, timezone
-from django_pyodbc.creation import DatabaseCreation
-from django_pyodbc.introspection import DatabaseIntrospection
 
 DatabaseError = Database.Error
 IntegrityError = Database.IntegrityError
@@ -107,7 +108,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     allow_sliced_subqueries = False
     supports_paramstyle_pyformat = False
 
-    #has_bulk_insert = False
+    has_bulk_insert = False
     # DateTimeField doesn't support timezones, only DateTimeOffsetField
     supports_timezones = False
     supports_sequence_reset = False
@@ -173,7 +174,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     creation_class = DatabaseCreation
     introspection_class = DatabaseIntrospection
     validation_class = BaseDatabaseValidation
-    
+
 
     def __init__(self, *args, **kwargs):
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
@@ -539,6 +540,11 @@ class CursorWrapper(object):
     def __iter__(self):
         return iter(self.cursor)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        return False
 
     # # MS SQL Server doesn't support explicit savepoint commits; savepoints are
     # # implicitly committed with the transaction.
