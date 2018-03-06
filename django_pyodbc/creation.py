@@ -43,6 +43,8 @@
 import base64
 import random
 
+from django_pyodbc.compat import b, md5_constructor
+
 try:
     from django.db.backends.base.creation import BaseDatabaseCreation
 except ImportError:
@@ -50,7 +52,6 @@ except ImportError:
     from django.db.backends.creation import BaseDatabaseCreation
 
 
-from django_pyodbc.compat import b, md5_constructor
 
 class DataTypesWrapper(dict):
     def __getitem__(self, item):
@@ -106,7 +107,7 @@ class DatabaseCreation(BaseDatabaseCreation):
         'TimeField':                    'time',
     })
 
-    def _create_test_db(self, verbosity, autoclobber):
+    def _create_test_db(self, verbosity, autoclobber, keepdb=False):
         settings_dict = self.connection.settings_dict
 
         if self.connection._DJANGO_VERSION >= 13:
