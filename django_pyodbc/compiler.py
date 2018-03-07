@@ -210,7 +210,8 @@ class SQLCompiler(compiler.SQLCompiler):
         if with_limits and self.query.low_mark == self.query.high_mark:
             return '', ()
 
-        self._fix_aggregates()
+        if DjangoVersion[2] == 1 and DjangoVersion[3] < 10:
+            self._fix_aggregates()
 
         self._using_row_number = False
 
