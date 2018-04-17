@@ -248,10 +248,15 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         settings_dict = self.settings_dict
         db_str, user_str, passwd_str, port_str = None, None, "", None
         options = settings_dict['OPTIONS']
+        test = settings_dict['TEST']
+        try:
+            test_name = test.get('NAME')
+        except AttributeError:
+            test_name = None
         if settings_dict['NAME']:
             db_str = settings_dict['NAME']
-        elif settings_dict['TEST'].get('NAME'):
-            db_str = settings_dict['TEST'].get('NAME')
+        elif test_name:
+            db_str = test_name
         if settings_dict['HOST']:
             host_str = settings_dict['HOST']
         else:
