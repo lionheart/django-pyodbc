@@ -248,8 +248,15 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         settings_dict = self.settings_dict
         db_str, user_str, passwd_str, port_str = None, None, "", None
         options = settings_dict['OPTIONS']
+        test = settings_dict['TEST']
+        try:
+            test_name = test.get('NAME')
+        except AttributeError:
+            test_name = None
         if settings_dict['NAME']:
             db_str = settings_dict['NAME']
+        elif test_name:
+            db_str = test_name
         if settings_dict['HOST']:
             host_str = settings_dict['HOST']
         else:
@@ -469,6 +476,9 @@ class CursorWrapper(object):
 
     def execute(self, sql, params=()):
         self.last_sql = sql
+        #django-debug toolbar error
+        if params == None:
+            params = ()
         sql = self.format_sql(sql, len(params))
         params = self.format_params(params)
         self.last_params = params

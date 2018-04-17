@@ -153,7 +153,7 @@ class DatabaseCreation(BaseDatabaseCreation):
         if self.connection.ops.on_azure_sql_db:
             self.connection.close()
             settings_dict["NAME"] = 'master'
-        return super(DatabaseCreation, self)._create_test_db(verbosity, autoclobber)
+        return super(DatabaseCreation, self)._create_test_db(verbosity, autoclobber, keepdb)
 
     def _destroy_test_db(self, test_database_name, verbosity):
         "Internal implementation - remove the test db tables."
