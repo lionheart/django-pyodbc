@@ -44,18 +44,23 @@
 MS SQL Server database backend for Django.
 """
 import datetime
+import logging
 import os
 import re
 import sys
+from time import time
 import warnings
 
 from django.core.exceptions import ImproperlyConfigured
+
 
 try:
     import pyodbc as Database
 except ImportError:
     e = sys.exc_info()[1]
     raise ImproperlyConfigured("Error loading pyodbc module: %s" % e)
+
+logger = logging.getLogger('django.db.backends')
 
 m = re.match(r'(\d+)\.(\d+)\.(\d+)(?:-beta(\d+))?', Database.version)
 vlist = list(m.groups())
@@ -391,7 +396,10 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 self.driver_supports_utf8 = (self.drv_name == 'SQLSRV32.DLL'
                                              or ms_sqlncli.match(self.drv_name))
 
-        return CursorWrapper(cursor, self.driver_supports_utf8, self.encoding, self)
+        if settings.DEBUG:
+            return CursorDebugWrapper(cursor, self.driver_supports_utf8, self.encoding, self)
+        else:
+            return CursorWrapper(cursor, self.driver_supports_utf8, self.encoding, self)
 
     def _execute_foreach(self, sql, table_names=None):
         cursor = self.cursor()
@@ -551,3 +559,33 @@ class CursorWrapper(object):
                 'sql': '-- RELEASE SAVEPOINT %s -- (because assertNumQueries)' % self.ops.quote_name(sid),
                 'time': '0.000',
             })
+
+
+# copied from Django 
+# https://github.com/django/django/blob/0bf7b25f8f667d3710de91e91ae812efde05187c/django/db/backends/utils.py#L92
+# Not optimized/refactored to maintain a semblance to the original code 
+class CursorDebugWrapper(CursorWrapper):
+
+    def execute(self, sql, params=()):
+        start = time()
+        try:
+            return super().execute(sql, params)
+        finally:
+            stop = time()
+            duration = stop - start
+            logger.debug(
+                '(%.3f) %s; args=%s', duration, sql, params,
+                extra={'duration': duration, 'sql': sql, 'params': params}
+            )
+
+    def executemany(self, sql, param_list):
+        start = time()
+        try:
+            return super().executemany(sql, param_list)
+        finally:
+            stop = time()
+            duration = stop - start
+            logger.debug(
+                '(%.3f) %s; args=%s', duration, sql, param_list,
+                extra={'duration': duration, 'sql': sql, 'params': param_list}
+            )
