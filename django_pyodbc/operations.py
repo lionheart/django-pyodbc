@@ -261,7 +261,10 @@ class DatabaseOperations(BaseDatabaseOperations):
         # @@IDENTITY is not limited to a specific scope.
 
         table_name = self.quote_name(table_name)
-        cursor.execute("SELECT CAST(IDENT_CURRENT(%s) as bigint)", [table_name])
+        if self._is_db2:
+            cursor.execute("SELECT CAST(IDENTITY_VAL_LOCAL() as bigint) from %s" % table_name)
+        else:
+            cursor.execute("SELECT py(IDENT_CURRENT(%s) as bigint)", [table_name])
         return cursor.fetchone()[0]
 
     def fetch_returned_insert_id(self, cursor):
