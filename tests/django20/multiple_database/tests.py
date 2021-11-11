@@ -179,7 +179,7 @@ class QueryTestCase(TestCase):
         dive = Book.objects.using('other').get(title="Dive into Python")
         mark = Person.objects.using('other').get(name="Mark Pilgrim")
 
-        # Retrive related object by descriptor. Related objects should be database-baound
+        # Retrive related object by descriptor. Related objects should be database-bound
         self.assertEqual(list(dive.authors.all().values_list('name', flat=True)),
                           ['Mark Pilgrim'])
 
@@ -425,7 +425,7 @@ class QueryTestCase(TestCase):
         chris = Person.objects.using('other').get(name="Chris Mills")
         dive = Book.objects.using('other').get(title="Dive into Python")
 
-        # Retrive related object by descriptor. Related objects should be database-baound
+        # Retrive related object by descriptor. Related objects should be database-bound
         self.assertEqual(list(chris.edited.values_list('title', flat=True)),
                           ['Dive into Python'])
 
@@ -618,7 +618,7 @@ class QueryTestCase(TestCase):
         alice_profile = UserProfile.objects.using('default').get(flavor='chocolate')
         bob_profile = UserProfile.objects.using('other').get(flavor='crunchy frog')
 
-        # Retrive related object by descriptor. Related objects should be database-baound
+        # Retrive related object by descriptor. Related objects should be database-bound
         self.assertEqual(alice_profile.user.username, 'alice')
         self.assertEqual(bob_profile.user.username, 'bob')
 
