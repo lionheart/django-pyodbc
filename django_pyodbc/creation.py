@@ -57,7 +57,7 @@ class DataTypesWrapper(dict):
     def __getitem__(self, item):
         if item in ('PositiveIntegerField', 'PositiveSmallIntegerField'):
             # The check name must be unique for the database. Add a random
-            # component so the regresion tests don't complain about duplicate names
+            # component so the regression tests don't complain about duplicate names
             fldtype = {'PositiveIntegerField': 'int', 'PositiveSmallIntegerField': 'smallint'}[item]
             rnd_hash = md5_constructor(b(str(random.random()))).hexdigest()
             unique = base64.b64encode(b(rnd_hash), b('__'))[:6]
