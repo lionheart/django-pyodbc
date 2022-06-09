@@ -18,6 +18,7 @@
 import re
 import os
 
+
 try:
     from setuptools import setup
 except ImportError:
@@ -25,51 +26,39 @@ except ImportError:
 
 with open(os.path.join(os.path.dirname(__file__), "README.rst")) as file:
     long_description = file.read()
-
     id_regex = re.compile(r"<\#([\w-]+)>")
     link_regex = re.compile(r"<(\w+)>")
     link_alternate_regex = re.compile(r"   :target: (\w+)")
-
     long_description = id_regex.sub(r"<https://github.com/lionheart/django-pyodbc#\1>", long_description)
     long_description = link_regex.sub(r"<https://github.com/lionheart/django-pyodbc/blob/master/\1>", long_description)
     long_description = link_regex.sub(r"<https://github.com/lionheart/django-pyodbc/blob/master/\1>", long_description)
     long_description = link_alternate_regex.sub(r"   :target: https://github.com/lionheart/django-pyodbc/blob/master/\1", long_description)
-
 metadata = {}
 metadata_file = "django_pyodbc/metadata.py"
 exec(compile(open(metadata_file).read(), metadata_file, 'exec'), metadata)
-
 # http://pypi.python.org/pypi?:action=list_classifiers
-classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Environment :: Console",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
-    "License :: OSI Approved :: BSD License",
-    "Natural Language :: English",
-    "Operating System :: MacOS :: MacOS X",
-    "Operating System :: OS Independent",
-    "Operating System :: Unix",
-    "Programming Language :: Python :: 2.7",
-    "Topic :: Software Development :: Libraries",
-]
+classifiers = ["Development Status :: 5 - Production/Stable", 
+               "Environment :: Console", 
+               "Intended Audience :: Developers", 
+               "License :: OSI Approved :: Apache Software License", 
+               "License :: OSI Approved :: BSD License", 
+               "Natural Language :: English", 
+               "Operating System :: MacOS :: MacOS X", 
+               "Operating System :: OS Independent", 
+               "Operating System :: Unix", 
+               "Programming Language :: Python :: 2.7", 
+               "Topic :: Software Development :: Libraries", ]
 
-setup(
-    name='django-pyodbc',
-    long_description=long_description,
-    version=metadata['__version__'],
-    license=metadata['__license__'],
-    maintainer=metadata['__maintainer__'],
-    maintainer_email=metadata['__maintainer_email__'],
-    description="Django 1.5-1.10 SQL Server backend using pyodbc.",
-    url='https://github.com/lionheart/django-pyodbc',
-    package_data={'': ['LICENSE', 'README.rst']},
-    packages=[
-        'django_pyodbc',
-        'django_pyodbc.management',
-        'django_pyodbc.management.commands'
-    ],
-    install_requires=[
-        'pyodbc>=3.0.6,<4.1',
-    ]
-)
+setup(name='django-pyodbc', 
+      long_description=long_description, 
+      version=metadata['__version__'], 
+      license=metadata['__license__'], 
+      maintainer=metadata['__maintainer__'], 
+      maintainer_email=metadata['__maintainer_email__'], 
+      description="Django 1.5-1.10 SQL Server backend using pyodbc.", 
+      url='https://github.com/lionheart/django-pyodbc', 
+      package_data={'': ['LICENSE', 'README.rst']}, 
+      packages=['django_pyodbc', 
+                'django_pyodbc.management', 
+                'django_pyodbc.management.commands'], 
+      install_requires=['pyodbc>=3.0.6,<4.1', ])
