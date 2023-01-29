@@ -510,7 +510,7 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
         """
         meta = self.query.get_meta()
 
-        if meta.has_auto_field:
+        if getattr(meta, 'has_auto_field',False):
             if hasattr(self.query, 'fields'):
                 # django 1.4 replaced columns with fields
                 fields = self.query.fields
@@ -583,7 +583,7 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
         sql = ' '.join(result)
 
         meta = self.query.get_meta()
-        if meta.has_auto_field:
+        if getattr(meta, 'has_auto_field',False):
             # db_column is None if not explicitly specified by model field
             auto_field_column = meta.auto_field.db_column or meta.auto_field.column
 
@@ -651,7 +651,7 @@ class SQLInsertCompiler2(compiler.SQLInsertCompiler, SQLCompiler):
         # This section deals with specifically setting the primary key,
         # or using default values if necessary
         meta = self.query.get_meta()
-        if meta.has_auto_field:
+        if getattr(meta, 'has_auto_field',False):
             # db_column is None if not explicitly specified by model field
             auto_field_column = meta.auto_field.db_column or meta.auto_field.column
             out = []

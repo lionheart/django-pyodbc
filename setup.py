@@ -50,7 +50,7 @@ classifiers = [
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: OS Independent",
     "Operating System :: Unix",
-    "Programming Language :: Python :: 2.7",
+    "Programming Language :: Python :: 3.9",
     "Topic :: Software Development :: Libraries",
 ]
 
@@ -71,5 +71,6 @@ setup(
     ],
     install_requires=[
         'pyodbc>=3.0.6,<4.1',
+        'six>=1.15.0'
     ]
 )

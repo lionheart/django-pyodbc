@@ -84,6 +84,8 @@ except ImportError:
 
 if DjangoVersion[:2] == (2, 0):
     _DJANGO_VERSION = 20
+elif DjangoVersion[:2] == (3, 1):
+    _DJANGO_VERSION = 31
 else:
     if DjangoVersion[0] == 1:
         raise ImproperlyConfigured("Django %d.%d " % DjangoVersion[:2] +
@@ -439,7 +441,7 @@ class CursorWrapper(object):
     def close(self):
         try:
             self.cursor.close()
-        except Database.ProgrammingError:
+        except:
             pass
 
     def format_sql(self, sql, n_params=None):

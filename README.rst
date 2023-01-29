@@ -14,6 +14,7 @@ Features
 --------
 
 * [x] Alpha support for Django 2.0 via ``pip install django-pyodbc>=2.0.0a1``
+* [x] Alpha support for Django 3.1 via ``pip install django-pyodbc>=2.0.0a2``
 * [x] Support for Django 1.4-1.10.
 * [x] Support for SQL Server 2000, 2005, 2008, and 2012 (please let us know if you have success running this backend with another version of SQL Server)
 * [x] Support for Openedge 11.6

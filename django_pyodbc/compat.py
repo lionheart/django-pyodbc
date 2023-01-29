@@ -71,13 +71,13 @@ except ImportError:
 
 # new modules from Django1.5
 try:
-    from django.utils.six import PY3
+    from six import PY3
     _py3 = PY3
 except ImportError:
     _py3 = False
 
 try:
-    from django.utils.six import b, binary_type, string_types, text_type
+    from six import b, binary_type, string_types, text_type
 except ImportError:
     b = lambda s: s
     binary_type = str
